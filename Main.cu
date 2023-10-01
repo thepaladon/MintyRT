@@ -4,10 +4,10 @@
 
 #include "cuda_runtime.h"
 #include "device_launch_parameters.h"
+#include "Ray.cuh"
+#include "Vec3.cuh"
 
 #include "Window.h"
-
-
 
 constexpr int FB_WIDTH = 943; 
 constexpr int FB_HEIGHT= 540;
@@ -22,6 +22,13 @@ void check_cuda(cudaError_t result, char const* const func, const char* const fi
         exit(99);
     }
 }
+
+__device__ Vec3 color(const Ray& r) {
+   Vec3 unit_direction = r.direction().normalize();
+   float t = 0.5f*(unit_direction.y() + 1.0f);
+   return (1.0f-t) * Vec3(1.0, 1.0, 1.0) + t * Vec3(0.5, 0.7, 1.0);
+}
+
 
 __global__ void render(uchar3* fb, int max_x, int max_y) {
     int i = threadIdx.x + blockIdx.x * blockDim.x;
