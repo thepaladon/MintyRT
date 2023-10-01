@@ -25,20 +25,22 @@ void check_cuda(cudaError_t result, char const* const func, const char* const fi
 
 __device__ Vec3 color(const Ray& r) {
    Vec3 unit_direction = r.direction().normalize();
-   float t = 0.5f*(unit_direction.y() + 1.0f);
-   return (1.0f-t) * Vec3(1.0, 1.0, 1.0) + t * Vec3(0.5, 0.7, 1.0);
+   float t = 0.5f * (unit_direction.y() + 1.0f);
+   return (1.0f - t) * Vec3(1.0, 1.0, 1.0) + t * Vec3(0.5, 0.7, 1.0);
 }
 
 
-__global__ void render(uchar3* fb, int max_x, int max_y) {
+__global__ void render(uchar3* fb, int max_x, int max_y, Vec3 lower_left_corner, Vec3 horizontal, Vec3 vertical, Vec3 origin) {
     int i = threadIdx.x + blockIdx.x * blockDim.x;
     int j = threadIdx.y + blockIdx.y * blockDim.y;
     if ((i >= max_x) || (j >= max_y)) return;
-    int pixel_index = j * max_x + i ;
-    fb[pixel_index].z = i * 255 / max_x;
-    fb[pixel_index].y = j * 255 / max_y;
-    fb[pixel_index].x = 10;
+    int pixel_index = j * max_x + i;
+    float u = float(i) / float(max_x);
+    float v = float(j) / float(max_y);
+    Ray r(origin, lower_left_corner + u * horizontal + v * vertical);
+    fb[pixel_index] = color(r).to_uchar3();
 }
+
 
 
 int main()
@@ -90,7 +92,15 @@ int main()
         // Render our buffer
         dim3 blocks(alignedX / tx + 1, alignedY / ty + 1);
         dim3 threads(tx, ty);
-        render << <blocks, threads >> > (gpu_fb, alignedX, alignedY);
+        render << <blocks, threads >> > (
+            gpu_fb, 
+            alignedX, 
+            alignedY, 
+            Vec3(-2.0, -1.0, -1.0),
+            Vec3(4.0, 0.0, 0.0),
+            Vec3(0.0, 2.0, 0.0),
+            Vec3(0.0, 0.0, 0.0)
+            );
         checkCudaErrors(cudaGetLastError());
         checkCudaErrors(cudaDeviceSynchronize());
 

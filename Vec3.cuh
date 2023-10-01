@@ -28,6 +28,7 @@ public:
     __host__ __device__ inline float length() const { return sqrt(e[0] * e[0] + e[1] * e[1] + e[2] * e[2]); }
     __host__ __device__ inline float squared_length() const { return e[0] * e[0] + e[1] * e[1] + e[2] * e[2]; }
     __host__ __device__ inline Vec3 normalize() const;
+    __host__ __device__ inline uchar3 to_uchar3() const;
 
     float e[3];
 };
@@ -41,6 +42,15 @@ __host__ __device__ inline Vec3 Vec3::normalize() const
     mod[1] *= k;
     mod[2] *= k;
     return mod;
+}
+
+__host__ __device__ inline uchar3 Vec3::to_uchar3() const
+{
+    uchar3 rgb;
+    rgb.z = static_cast<unsigned char>(e[0] * 255.99f);
+    rgb.y = static_cast<unsigned char>(e[1] * 255.99f);
+    rgb.x = static_cast<unsigned char>(e[2] * 255.99f);
+    return rgb;
 }
 
 __host__ __device__ inline Vec3 operator+(const Vec3& v1, const Vec3& v2) {
