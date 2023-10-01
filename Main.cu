@@ -7,6 +7,8 @@
 
 #include "Window.h"
 
+
+
 constexpr int FB_WIDTH = 943; 
 constexpr int FB_HEIGHT= 540;
 
@@ -51,7 +53,6 @@ int main()
     }
 
 
-
     // Output FB
     bool running = true;
     while (running)
@@ -92,6 +93,10 @@ int main()
     }
 
 
+    m_Window->Shutdown();
+    delete m_Window;
+    delete cpu_fb;
+    checkCudaErrors(cudaFree(gpu_fb));
 
     return 0;
 }
