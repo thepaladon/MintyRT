@@ -8,17 +8,17 @@ public:
     __host__ __device__ Vec3() {}
     __host__ __device__ Vec3(float s) { e[0] = s; e[1] = s; e[2] = s; }
     __host__ __device__ Vec3(float e0, float e1, float e2) { e[0] = e0; e[1] = e1; e[2] = e2; }
-    __host__ __device__ inline float x() const { return e[0]; }
-    __host__ __device__ inline float y() const { return e[1]; }
-    __host__ __device__ inline float z() const { return e[2]; }
-    __host__ __device__ inline float r() const { return e[0]; }
-    __host__ __device__ inline float g() const { return e[1]; }
-    __host__ __device__ inline float b() const { return e[2]; }
+    __host__ __device__ inline float& x() { return e[0]; }
+    __host__ __device__ inline float& y() { return e[1]; }
+    __host__ __device__ inline float& z() { return e[2]; }
+    __host__ __device__ inline float& r() { return e[0]; }
+    __host__ __device__ inline float& g() { return e[1]; }
+    __host__ __device__ inline float& b() { return e[2]; }
 
     __host__ __device__ inline const Vec3& operator+() const { return *this; }
     __host__ __device__ inline Vec3 operator-() const { return Vec3(-e[0], -e[1], -e[2]); }
     __host__ __device__ inline float operator[](int i) const { return e[i]; }
-    __host__ __device__ inline float& operator[](int i) { return e[i]; };
+    __host__ __device__ inline float& operator[](int i) { return e[i]; }
 
     __host__ __device__ inline Vec3& operator+=(const Vec3& v2);
     __host__ __device__ inline Vec3& operator-=(const Vec3& v2);

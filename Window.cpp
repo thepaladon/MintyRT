@@ -36,6 +36,19 @@ Window::Window(uint32_t width, uint32_t height, std::string name)
         wc.hInstance,
         NULL);
 
+    // Register for raw input from the mouse
+    RAWINPUTDEVICE rawInputDevice;
+    rawInputDevice.usUsagePage = 0x01; // Generic desktop controls
+    rawInputDevice.usUsage = 0x02;     // Mouse
+    rawInputDevice.hwndTarget = m_WindowHandle;
+    rawInputDevice.dwFlags = 0;
+
+    if (RegisterRawInputDevices(&rawInputDevice, 1, sizeof(RAWINPUTDEVICE)) == FALSE) {
+        printf("Failed lol");
+        assert(false);
+    }
+
+
     ShowWindow(m_WindowHandle, SW_SHOWDEFAULT);
 
     // Here I pass in struct with data to alter when needed
@@ -77,6 +90,8 @@ bool Window::OnUpdate()
 {
     // Reset from last frame
     m_WindowData.m_Resized = false;
+    m_WindowData.m_MouseDeltaX = 0;
+    m_WindowData.m_MouseDeltaY = 0;
 
     //  Goes through all messages and events (to process input)
     MSG msg;
@@ -162,6 +177,22 @@ LRESULT WINAPI WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
         printf("Resizing : %i : %i \n", width, height);
 
     } break;
+
+    case WM_INPUT: {
+        RAWINPUT rawInput;
+        UINT size = sizeof(RAWINPUT);
+        GetRawInputData(reinterpret_cast<HRAWINPUT>(lParam), RID_INPUT, &rawInput, &size, sizeof(RAWINPUTHEADER));
+
+        if (rawInput.header.dwType == RIM_TYPEMOUSE) {
+            const int deltaX = rawInput.data.mouse.lLastX;
+            const int deltaY = rawInput.data.mouse.lLastY;
+
+            data->m_MouseDeltaX = deltaX;
+            data->m_MouseDeltaY = deltaY;
+        }
+
+        break;
+    }
 
     }
     return DefWindowProc(hWnd, msg, wParam, lParam);

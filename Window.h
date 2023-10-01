@@ -13,6 +13,9 @@ struct WindowData
 
 	uint32_t m_Width;
 	uint32_t m_Height;
+
+	float m_MouseDeltaX;
+	float m_MouseDeltaY;
 };
 
 class Window
@@ -34,6 +37,8 @@ public:
 
 	uint32_t GetHeight() const { return m_WindowData.m_Height; }
 	uint32_t GetWidth() const { return m_WindowData.m_Width; }
+	float GetMouseDeltaX() const { return m_WindowData.m_MouseDeltaX; }
+	float GetMouseDeltaY() const { return m_WindowData.m_MouseDeltaY; }
 	uint32_t GetAlignedWidth() const;
 	uint32_t GetAlignedHeight() const;
 	bool GetIsResized() const { return m_WindowData.m_Resized; }
