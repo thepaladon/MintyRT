@@ -89,6 +89,7 @@
     <CudaCompile Include="Main.cu" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="Camera.cuh" />
     <ClInclude Include="Ray.cuh" />
     <ClInclude Include="Vec3.cuh" />
     <ClInclude Include="Utils.h" />

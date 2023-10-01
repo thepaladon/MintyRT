@@ -1,7 +1,9 @@
 ﻿
+#include <chrono>
 #include <cstdlib>
 #include <iostream>
 
+#include "Camera.cuh"
 #include "cuda_runtime.h"
 #include "device_launch_parameters.h"
 #include "Ray.cuh"
@@ -30,14 +32,14 @@ __device__ Vec3 color(const Ray& r) {
 }
 
 
-__global__ void render(uchar3* fb, int max_x, int max_y, Vec3 lower_left_corner, Vec3 horizontal, Vec3 vertical, Vec3 origin) {
+__global__ void render(uchar3* fb, int max_x, int max_y, Camera cam) {
     int i = threadIdx.x + blockIdx.x * blockDim.x;
     int j = threadIdx.y + blockIdx.y * blockDim.y;
     if ((i >= max_x) || (j >= max_y)) return;
     int pixel_index = j * max_x + i;
     float u = float(i) / float(max_x);
     float v = float(j) / float(max_y);
-    Ray r(origin, lower_left_corner + u * horizontal + v * vertical);
+    Ray r = cam.generate((float)max_x, (float)max_y, u, v);
     fb[pixel_index] = color(r).to_uchar3();
 }
 
@@ -61,11 +63,24 @@ int main()
         cpu_fb = new uchar3[num_pixels];
     }
 
+    
+    // Start the timer
+    auto start_time = std::chrono::high_resolution_clock::now();
+	auto end_time = std::chrono::high_resolution_clock::now();
+    float run_timer_s = 0.0f;
 
     // Output FB
     bool running = true;
     while (running)
     {
+        // Note, resizing and moving the window won't be caught in DT because it happens in m_Window->Update()
+        // This is desired behavior because nobody likes things to jump around 
+        end_time = std::chrono::high_resolution_clock::now();
+        std::chrono::duration<float> delta_time_s = end_time - start_time; // in seconds
+        run_timer_s += delta_time_s.count();
+    	start_time = std::chrono::high_resolution_clock::now();
+
+
         running = m_Window->OnUpdate();
 
         if (m_Window->GetIsResized()) {
@@ -89,6 +104,8 @@ int main()
         int tx = 8;
         int ty = 8;
 
+        const Camera cam(Vec3(0.0f), Vec3(0.0f, 1.0f, 0.0f), Vec3(0.f, -0.6f, -1.f), 90.0f, float(alignedX) / float(alignedY));
+
         // Render our buffer
         dim3 blocks(alignedX / tx + 1, alignedY / ty + 1);
         dim3 threads(tx, ty);
@@ -96,10 +113,7 @@ int main()
             gpu_fb, 
             alignedX, 
             alignedY, 
-            Vec3(-2.0, -1.0, -1.0),
-            Vec3(4.0, 0.0, 0.0),
-            Vec3(0.0, 2.0, 0.0),
-            Vec3(0.0, 0.0, 0.0)
+            cam
             );
         checkCudaErrors(cudaGetLastError());
         checkCudaErrors(cudaDeviceSynchronize());
@@ -108,7 +122,6 @@ int main()
 
         m_Window->RenderFb(cpu_fb);
     }
-
 
     m_Window->Shutdown();
     delete m_Window;
