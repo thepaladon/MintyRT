@@ -6,8 +6,8 @@
 #include "device_launch_parameters.h"
 #include "Window.h"
 
-constexpr int FB_WIDTH = 800; 
-constexpr int FB_HEIGHT= 420;
+constexpr int FB_WIDTH = 943; 
+constexpr int FB_HEIGHT= 540;
 
 #define checkCudaErrors(val) check_cuda( (val), #val, __FILE__, __LINE__ )
 void check_cuda(cudaError_t result, char const* const func, const char* const file, int const line) {
@@ -32,53 +32,79 @@ __global__ void render(uchar3* fb, int max_x, int max_y) {
 }
 
 
+
+
 int main()
 {
-	Window* m_Window = new Window(FB_WIDTH, FB_HEIGHT, "Cuda RT");
+	Window* m_Window = new Window(FB_WIDTH, FB_HEIGHT, "Minty Cuda RT");
 
-	const int num_pixels = FB_WIDTH * FB_HEIGHT;
-	const size_t fb_size = num_pixels * sizeof(uchar3);
+    uchar3* gpu_fb;
+    uchar3* cpu_fb = nullptr;
 
-    // allocate FB
-    uchar3* fb;
-    checkCudaErrors(cudaMallocManaged((void**)&fb, fb_size));
+    uint32_t alignedX = alignUp(m_Window->GetWidth(), (uint32_t)4);
+    uint32_t alignedY = alignUp(m_Window->GetHeight(), (uint32_t)4);
 
-    // Thread Groups
-    int tx = 8;
-    int ty = 8;
-
-
-    // Render our buffer
-    dim3 blocks(FB_WIDTH / tx + 1, FB_HEIGHT / ty + 1);
-    dim3 threads(tx, ty);
-    render <<<blocks, threads>>> (fb, FB_WIDTH, FB_HEIGHT);
-    checkCudaErrors(cudaGetLastError());
-    checkCudaErrors(cudaDeviceSynchronize());
-
-
-    uchar3* h_framebuffer = new uchar3[FB_WIDTH * FB_HEIGHT];
-    cudaMemcpy(h_framebuffer, fb, FB_WIDTH * FB_HEIGHT * sizeof(uchar3), cudaMemcpyDeviceToHost);
-
-
-    // Output FB
-    std::cout << "P3\n" << FB_WIDTH << " " << FB_HEIGHT << "\n255\n";
-    for (int j = FB_HEIGHT - 1; j >= 0; j--) {
-        for (int i = 0; i < FB_WIDTH; i++) {
-            const size_t pixel_index = j * FB_WIDTH + i;
-            const uint8_t r = fb[pixel_index].x;
-            const uint8_t g = fb[pixel_index].y;
-            const uint8_t b = fb[pixel_index].z;
-            //printf("Value: %hhu  %hhu %hhu \n", r, g, b);
-        }
+	// Initial Allocate Frame Buffer
+	{
+        
+        const int num_pixels = alignedX * alignedY;
+        const size_t fb_size = num_pixels * sizeof(uchar3);
+        checkCudaErrors(cudaMallocManaged((void**)&gpu_fb, fb_size));
+        cpu_fb = new uchar3[num_pixels];
     }
 
+    // Output FB
     bool running = true;
     while (running)
     {
-        running = m_Window->OnUpdate(h_framebuffer);
+        running = m_Window->OnUpdate();
+
+        if (m_Window->GetIsResized()) {
+            m_Window->CreateSampleDIB();
+
+            alignedX = alignUp(m_Window->GetWidth(), (uint32_t)4);
+            alignedY = alignUp(m_Window->GetHeight(), (uint32_t)4);
+
+            checkCudaErrors(cudaFree(gpu_fb));
+            delete cpu_fb;
+
+            const int num_pixels = alignedX * alignedY;
+            const size_t fb_size = num_pixels * sizeof(uchar3);
+            checkCudaErrors(cudaMallocManaged((void**)&gpu_fb, fb_size));
+            cpu_fb = new uchar3[alignedX * alignedY];
+
+            printf("Resized : %i : %i \n", alignedX, alignedY);
+
+        }
+
+        // Thread Groups
+        int tx = 8;
+        int ty = 8;
+
+        // Render our buffer
+        dim3 blocks(alignedX / tx + 1, alignedY / ty + 1);
+        dim3 threads(tx, ty);
+        render << <blocks, threads >> > (gpu_fb, alignedX, alignedY);
+        checkCudaErrors(cudaGetLastError());
+        checkCudaErrors(cudaDeviceSynchronize());
+
+        /*
+        for (int j = alignedY - 1; j >= 0; j--) {
+            for (int i = 0; i < alignedX; i++) {
+                const size_t pixel_index = j * alignedX + i;
+                const uint8_t r = gpu_fb[pixel_index].x;
+                const uint8_t g = gpu_fb[pixel_index].y;
+                const uint8_t b = gpu_fb[pixel_index].z;
+            }
+        }
+        */
+
+        cudaMemcpy(cpu_fb, gpu_fb, alignedX * alignedY * sizeof(uchar3), cudaMemcpyDeviceToHost);
+
+        m_Window->RenderFb(cpu_fb);
+
     }
 
-    //checkCudaErrors(cudaFree(fb));
 
 
     return 0;

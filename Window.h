@@ -3,6 +3,23 @@
 #include <string>
 #include <Windows.h>
 
+template <typename T>
+T alignUp(T value, T alignment) {
+	if (alignment == 0) {
+		// Avoid division by zero; you may want to handle this differently depending on your needs
+		return value;
+	}
+
+	T remainder = value % alignment;
+
+	if (remainder != 0) {
+		return value + (alignment - remainder);
+	}
+
+	return value;
+}
+
+
 // In a struct since I need to pass this data to wndproc function as a pointer
 struct WindowData
 {
@@ -23,7 +40,8 @@ public:
 	~Window() {};
 
 	// Is false when window has been destroyed
-	bool OnUpdate(void* fb);
+	bool OnUpdate();
+	void RenderFb(void* fb);
 	void Shutdown();
 
 	HBITMAP CreateSampleDIB();
@@ -33,11 +51,12 @@ public:
 	void SetWidth(uint32_t width) { m_WindowData.m_Width = width; }
 	void SetHeight(uint32_t height) { m_WindowData.m_Height = height; }
 
-	bool GetHasResized() { return m_WindowData.m_Resized; }
+	bool GetIsResized() { return m_WindowData.m_Resized; }
 
 
 private:
 
+	HDC m_hMemDC = nullptr;
 	HBITMAP m_Bitmap = nullptr;
 	BITMAPINFO m_BitmapInfo = {};
 	void* m_fb = nullptr;

@@ -4,14 +4,14 @@
 #ifndef UNICODE
 #define UNICODE
 #endif 
+#include <assert.h>
+#include <vector_types.h>
 #include <Windows.h>
 #include <Windowsx.h>
 //----------------------------------------
 
 
 LRESULT WINAPI WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam);
-
-
 
 
 Window::Window(uint32_t width, uint32_t height, std::string name)
@@ -56,29 +56,19 @@ Window::Window(uint32_t width, uint32_t height, std::string name)
 
 HBITMAP Window::CreateSampleDIB()
 {
-    // Create a 100x100 pixel DIB with RGB color
+    // Check if an existing DIB exists
+    if (m_Bitmap) 
+    	DeleteObject(m_Bitmap);
+
     BITMAPINFO bmi = { 0 };
     bmi.bmiHeader.biSize = sizeof(BITMAPINFOHEADER);
-    bmi.bmiHeader.biWidth = m_WindowData.m_Width;
-    bmi.bmiHeader.biHeight = -m_WindowData.m_Height;  // Negative height for top-down DIB
+    bmi.bmiHeader.biWidth = alignUp(m_WindowData.m_Width, (uint32_t)4);
+    bmi.bmiHeader.biHeight = -alignUp(m_WindowData.m_Height, (uint32_t)4);  // Negative height for top-down DIB
     bmi.bmiHeader.biPlanes = 1;
-    bmi.bmiHeader.biBitCount = 24;  // 24-bit RGB
-    bmi.bmiHeader.biCompression = BI_RGB;
+    bmi.bmiHeader.biBitCount = sizeof(uchar3) * 8; // 24 - bit RGB
 
     void* pPixels = nullptr;
     HBITMAP hDIB = CreateDIBSection(NULL, &bmi, DIB_RGB_COLORS, &pPixels, NULL, 0);
-
-    // Populate the DIB with some sample data (e.g., a red square)
-    if (hDIB) {
-        for (int y = 0; y < 100; y++) {
-            for (int x = 0; x < 100; x++) {
-                BYTE* pPixel = reinterpret_cast<BYTE*>(pPixels) + ((y * 100 + x) * 3);
-                pPixel[0] = 255; // Red
-                pPixel[1] = 0;   // Green
-                pPixel[2] = 0;   // Blue
-            }
-        }
-    }
 
     m_BitmapInfo = bmi;
     m_fb = pPixels;
@@ -87,56 +77,55 @@ HBITMAP Window::CreateSampleDIB()
 }
 
 
-
-
-bool Window::OnUpdate(void* fb)
+bool Window::OnUpdate()
 {
     // Reset from last frame
     m_WindowData.m_Resized = false;
 
     //  Goes through all messages and events (to process input)
     MSG msg;
-
     while (PeekMessage(&msg, NULL, 0U, 0U, PM_REMOVE))
     {
         TranslateMessage(&msg);
         DispatchMessage(&msg);
     }
 
-    if (m_Bitmap) {
-        HDC hdc = GetDC(m_WindowHandle);
-        // Use SetDIBitsToDevice to copy the DIB to the window's DC
-        HDC hMemDC = CreateCompatibleDC(hdc);
-        HGDIOBJ hOldBitmap = SelectObject(hMemDC, m_Bitmap);
-
-        int result = SetDIBitsToDevice(
-            hdc,  // Destination DC
-            0,    // xDest
-            0,    // yDest
-            m_WindowData.m_Width,  // Width
-            m_WindowData.m_Height,  // Height
-            0,    // xSrc
-            0,    // ySrc
-            0,    // uStartScan
-            m_WindowData.m_Height,  // cScanLines
-            fb,  // Pointer to DIB pixels
-            &m_BitmapInfo, // Pointer to BITMAPINFO
-            DIB_RGB_COLORS  // Color table usage
-        );
-
-        SelectObject(hMemDC, hOldBitmap);
-        DeleteDC(hMemDC);
-
-        // Handle errors in result
-        if (result == GDI_ERROR) {
-            // Handle error here
-            printf("Error %i \n", result);
-        }
-    }
-
 
 
     return m_WindowData.m_Alive;
+}
+
+void Window::RenderFb(void* fb)
+{
+    HDC hdc = GetDC(m_WindowHandle);
+    // Use SetDIBitsToDevice to copy the DIB to the window's DC
+    HDC hMemDC = CreateCompatibleDC(hdc);
+    HGDIOBJ hOldBitmap = SelectObject(hMemDC, m_Bitmap);
+
+    int result = SetDIBitsToDevice(
+        hdc,  // Destination DC
+        0,    // xDest
+        0,    // yDest
+        alignUp(m_WindowData.m_Width, (uint32_t)4),  // Width
+        alignUp(m_WindowData.m_Height, (uint32_t)4),  // Height
+        0,    // xSrc
+        0,    // ySrc
+        0,    // uStartScan
+        m_WindowData.m_Height,  // cScanLines
+        fb,  // Pointer to DIB pixels
+        &m_BitmapInfo, // Pointer to BITMAPINFO
+        DIB_RGB_COLORS  // Color table usage
+    );
+
+    SelectObject(hMemDC, hOldBitmap);
+    DeleteDC(hMemDC);
+
+    // Handle errors in result
+    if (result == GDI_ERROR) {
+        // Handle error here
+        printf("Error %i \n", result);
+        assert(false);
+    }
 }
 
 void Window::Shutdown()
@@ -175,7 +164,9 @@ LRESULT WINAPI WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
         data->m_Width = width;
         data->m_Height = height;
         data->m_Resized = true;
+        printf("Resizing : %i : %i \n", width, height);
 
+        
     } break;
 
     }
