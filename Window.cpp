@@ -1,18 +1,12 @@
 #include "Window.h"
 
-// Maybe ignore warnings in these include
-#ifndef UNICODE
-#define UNICODE
-#endif 
-#include <assert.h>
+#include <cassert>
 #include <vector_types.h>
 #include <Windows.h>
 #include <Windowsx.h>
 //----------------------------------------
 
-
 LRESULT WINAPI WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam);
-
 
 Window::Window(uint32_t width, uint32_t height, std::string name)
 {
@@ -62,19 +56,21 @@ HBITMAP Window::CreateSampleDIB()
 
     BITMAPINFO bmi = { 0 };
     bmi.bmiHeader.biSize = sizeof(BITMAPINFOHEADER);
-    bmi.bmiHeader.biWidth = alignUp(m_WindowData.m_Width, (uint32_t)4);
-    bmi.bmiHeader.biHeight = -alignUp(m_WindowData.m_Height, (uint32_t)4);  // Negative height for top-down DIB
+    bmi.bmiHeader.biWidth = this->GetAlignedWidth();
+    bmi.bmiHeader.biHeight = -this->GetAlignedHeight();  // Negative height for top-down DIB
     bmi.bmiHeader.biPlanes = 1;
     bmi.bmiHeader.biBitCount = sizeof(uchar3) * 8; // 24 - bit RGB
 
     void* pPixels = nullptr;
-    HBITMAP hDIB = CreateDIBSection(NULL, &bmi, DIB_RGB_COLORS, &pPixels, NULL, 0);
+    const HBITMAP hDIB = CreateDIBSection(nullptr, &bmi, DIB_RGB_COLORS, &pPixels, nullptr, 0);
 
     m_BitmapInfo = bmi;
-    m_fb = pPixels;
     m_Bitmap = hDIB;
     return hDIB;
 }
+
+
+
 
 
 bool Window::OnUpdate()
@@ -90,14 +86,13 @@ bool Window::OnUpdate()
         DispatchMessage(&msg);
     }
 
-
-
     return m_WindowData.m_Alive;
 }
 
 void Window::RenderFb(void* fb)
 {
     HDC hdc = GetDC(m_WindowHandle);
+
     // Use SetDIBitsToDevice to copy the DIB to the window's DC
     HDC hMemDC = CreateCompatibleDC(hdc);
     HGDIOBJ hOldBitmap = SelectObject(hMemDC, m_Bitmap);
@@ -106,8 +101,8 @@ void Window::RenderFb(void* fb)
         hdc,  // Destination DC
         0,    // xDest
         0,    // yDest
-        alignUp(m_WindowData.m_Width, (uint32_t)4),  // Width
-        alignUp(m_WindowData.m_Height, (uint32_t)4),  // Height
+        m_WindowData.m_Width,  // Width
+        m_WindowData.m_Height,  // Height
         0,    // xSrc
         0,    // ySrc
         0,    // uStartScan
@@ -166,9 +161,21 @@ LRESULT WINAPI WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
         data->m_Resized = true;
         printf("Resizing : %i : %i \n", width, height);
 
-        
     } break;
 
     }
     return DefWindowProc(hWnd, msg, wParam, lParam);
+}
+
+
+#include "Utils.h"
+constexpr uint32_t WIN_ALIGNMENT = 4;
+uint32_t Window::GetAlignedWidth() const
+{
+    return alignUp(m_WindowData.m_Width, WIN_ALIGNMENT);
+}
+
+uint32_t Window::GetAlignedHeight() const
+{
+    return alignUp(m_WindowData.m_Height, WIN_ALIGNMENT);
 }

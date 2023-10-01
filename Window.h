@@ -3,23 +3,6 @@
 #include <string>
 #include <Windows.h>
 
-template <typename T>
-T alignUp(T value, T alignment) {
-	if (alignment == 0) {
-		// Avoid division by zero; you may want to handle this differently depending on your needs
-		return value;
-	}
-
-	T remainder = value % alignment;
-
-	if (remainder != 0) {
-		return value + (alignment - remainder);
-	}
-
-	return value;
-}
-
-
 // In a struct since I need to pass this data to wndproc function as a pointer
 struct WindowData
 {
@@ -45,21 +28,20 @@ public:
 	void Shutdown();
 
 	HBITMAP CreateSampleDIB();
-	uint32_t GetHeight() { return m_WindowData.m_Height; }
-	uint32_t GetWidth() { return m_WindowData.m_Width; }
 
 	void SetWidth(uint32_t width) { m_WindowData.m_Width = width; }
 	void SetHeight(uint32_t height) { m_WindowData.m_Height = height; }
 
-	bool GetIsResized() { return m_WindowData.m_Resized; }
-
+	uint32_t GetHeight() const { return m_WindowData.m_Height; }
+	uint32_t GetWidth() const { return m_WindowData.m_Width; }
+	uint32_t GetAlignedWidth() const;
+	uint32_t GetAlignedHeight() const;
+	bool GetIsResized() const { return m_WindowData.m_Resized; }
 
 private:
 
-	HDC m_hMemDC = nullptr;
 	HBITMAP m_Bitmap = nullptr;
 	BITMAPINFO m_BitmapInfo = {};
-	void* m_fb = nullptr;
 
 	WindowData m_WindowData = WindowData();
 	HWND m_WindowHandle;
