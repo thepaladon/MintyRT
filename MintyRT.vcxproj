@@ -86,7 +86,7 @@
     </CudaCompile>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <CudaCompile Include="kernel.cu" />
+    <CudaCompile Include="Main.cu" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Utils.h" />

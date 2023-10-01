@@ -4,6 +4,7 @@
 
 #include "cuda_runtime.h"
 #include "device_launch_parameters.h"
+
 #include "Window.h"
 
 constexpr int FB_WIDTH = 943; 
@@ -48,6 +49,8 @@ int main()
         checkCudaErrors(cudaMallocManaged((void**)&gpu_fb, fb_size));
         cpu_fb = new uchar3[num_pixels];
     }
+
+
 
     // Output FB
     bool running = true;
