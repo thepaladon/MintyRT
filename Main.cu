@@ -37,48 +37,53 @@ public:
     glm::vec3 vertex2;
 };
 
-__device__ bool RayIntersectsTriangle(
-    glm::vec3 rayOrigin,
-    glm::vec3 rayVector,
-    Triangle* inTriangle,
-    glm::vec3& outIntersectionPoint,
-    glm::vec3& outNormal
-)
+ __device__ bool intersect_tri(Ray& ray, const Triangle* tris, glm::uint triIdx)
 {
-    const glm::vec3 edge1 = inTriangle->vertex1 - inTriangle->vertex0;
-    const glm::vec3 edge2 = inTriangle->vertex2 - inTriangle->vertex0;
-    const glm::vec3 h = cross(rayVector, edge2);
+    const glm::vec3 edge1 = tris[triIdx].vertex1 - tris[triIdx].vertex0;
+    const glm::vec3 edge2 = tris[triIdx].vertex2 - tris[triIdx].vertex0;
+    const glm::vec3 h = cross(ray.d, edge2);
     const float a = dot(edge1, h);
-    if (a > -0.0001f && a < 0.0001f) return false; // ray parallel to triangle
-
+    if (fabs(a) < 0.0001) return false; // ray parallel to triangle
     const float f = 1 / a;
-    const glm::vec3 s = rayOrigin - inTriangle->vertex0;
+    const glm::vec3 s = ray.o - tris[triIdx].vertex0;
     const float u = f * dot(s, h);
     if (u < 0 || u > 1) return false;
     const glm::vec3 q = cross(s, edge1);
-    const float v = f * dot(rayVector, q);
-    if (v < 0 || u + v > 1) return false ;
-
-	const float t = f * dot(edge2, q);
-
-    if (t > 0.0001f) outIntersectionPoint = glm::vec3(t);
+    const float v = f * dot(ray.d, q);
+    if (v < 0 || u + v > 1) return false;
+    const float t = f * dot(edge2, q);
+    if (t > 0.0001f)
+    if (ray.t > t)
+    {
+        ray.t = t;
+        //ray->intersection.tri_hit = triIdx;
+        //ray->intersection.u = u;
+        //ray->intersection.v = v;
+        //ray->intersection.header_tri_count = header[0].tris_count;
+        //ray->intersection.geo_normal = cross(edge1, edge2);
+    }
     return true;
 }
 
 
-__device__ glm::vec3 color(const Ray& r) {
 
-    glm::vec3 v0 = glm::vec3(0.0f, 5.0f, 5.0f);
-    glm::vec3 v1 = glm::vec3(2.5f, 0.0f, 5.0f);
-    glm::vec3 v2 = glm::vec3(-2.5f, 0.0f, 5.0f);
+
+
+
+__device__ glm::vec3 color(Ray& r) {
+
+    glm::vec3 v0 = glm::vec3(0.0f, 1.0f, 1.0f);
+    glm::vec3 v1 = glm::vec3(.5f, 0.0f, 1.0f);
+    glm::vec3 v2 = glm::vec3(-.5f, 0.0f, 1.0f);
 
     Triangle tri{ v0, v1, v2 } ;
 
     glm::vec3 point(99000.0f);
     glm::vec3 normal(420.420f);
+    float t;
 
 
-    if (RayIntersectsTriangle(r.origin(), r.direction(), &tri, point, normal))
+    if (intersect_tri(r, &tri, 0))
     {
     	return { 1.0f, 0.0f, 0.0f };
     }
@@ -92,13 +97,11 @@ __device__ glm::vec3 color(const Ray& r) {
 
 __global__ void render(uchar3* fb, int max_x, int max_y, Camera cam) {
 
-    int i = threadIdx.x + blockIdx.x * blockDim.x;
-    int j = threadIdx.y + blockIdx.y * blockDim.y;
+    const int i = threadIdx.x + blockIdx.x * blockDim.x;
+    const int j = threadIdx.y + blockIdx.y * blockDim.y;
     if ((i >= max_x) || (j >= max_y)) return;
     int pixel_index = j * max_x + i;
-    float u = float(i) / float(max_x);
-    float v = float(j) / float(max_y);
-    Ray r = cam.generate((float)max_x, (float)max_y, u, v);
+    Ray r = cam.generate((float)max_x, (float)max_y, (float)i, (float)j);
     fb[pixel_index] = to_uchar3(color(r));
 }
 
@@ -130,8 +133,7 @@ int main()
     // Output FB
     bool running = true;
 
-	Camera cam(glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 0.0f, 0.0f), glm::radians(90.f), float(alignedX) / float(alignedY));
-
+	Camera cam(glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, glm::radians(-224.f), 0.0f), 75.f, float(alignedX) / float(alignedY));
 
     while (running)
     {
@@ -143,10 +145,18 @@ int main()
     	start_time = std::chrono::high_resolution_clock::now();
 
 
-        const float sensitivity = 0.1f;
+        const float sensitivity = .5f;
 
-        float m_dtx = m_Window->GetMouseDeltaX() * sensitivity;
-        float m_dty = m_Window->GetMouseDeltaY() * sensitivity;
+        float hor_inp = 0;
+        float ver_inp = 0;
+        if (m_Window->GetKey(VK_LEFT)) { hor_inp = 1.0; }
+        if (m_Window->GetKey(VK_RIGHT)) { hor_inp = -1.0; }
+        if (m_Window->GetKey(VK_UP)) { ver_inp = 1.0; }
+        if (m_Window->GetKey(VK_DOWN)) { ver_inp = -1.0; }
+
+
+        float m_dtx = hor_inp ;// m_Window->GetMouseDeltaX();
+        float m_dty = ver_inp ;// m_Window->GetMouseDeltaY();
 
 
         if (m_Window->GetKey('W'))
@@ -183,8 +193,13 @@ int main()
         cam.SetYaw(m_dtx);
     	cam.UpdateCamera();
 
+        //printf(" %f          %f \n", m_dtx, m_dty );
+
+        
         printf("Pos - X: %f, Y: %f, Z : %f \n", cam.m_Pos.x, cam.m_Pos.y, cam.m_Pos.z );
-        printf("Pitch: %f, Yaw: %f, Roll: %f \n \n", cam.m_PitchYawRoll.x, cam.m_PitchYawRoll.y, cam.m_PitchYawRoll.z );
+
+        auto rad = glm::degrees(cam.m_PitchYawRoll);
+    	printf("Pitch: %f, Yaw: %f, Roll: %f \n \n", rad.x, rad.y, rad.z );
 
         running = m_Window->OnUpdate();
 

@@ -15,4 +15,5 @@ public:
 
     glm::vec3 o;
     glm::vec3 d;
+    float t;
 };
