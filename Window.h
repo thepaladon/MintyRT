@@ -16,6 +16,10 @@ struct WindowData
 
 	float m_MouseDeltaX;
 	float m_MouseDeltaY;
+
+	int m_MouseGlobalPosX;
+	int m_MouseGlobalPosY;
+
 };
 
 class Window

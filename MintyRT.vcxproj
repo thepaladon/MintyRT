@@ -375,7 +375,6 @@
     <ClInclude Include="External\glm\vec4.hpp" />
     <ClInclude Include="External\glm\vector_relational.hpp" />
     <ClInclude Include="Ray.cuh" />
-    <ClInclude Include="Vec3.cuh" />
     <ClInclude Include="Utils.h" />
     <ClInclude Include="Window.h" />
   </ItemGroup>

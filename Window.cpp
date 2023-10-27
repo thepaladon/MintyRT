@@ -6,6 +6,7 @@
 #include <Windowsx.h>
 //----------------------------------------
 
+
 LRESULT WINAPI WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam);
 
 Window::Window(uint32_t width, uint32_t height, std::string name)
@@ -184,11 +185,12 @@ LRESULT WINAPI WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
         GetRawInputData(reinterpret_cast<HRAWINPUT>(lParam), RID_INPUT, &rawInput, &size, sizeof(RAWINPUTHEADER));
 
         if (rawInput.header.dwType == RIM_TYPEMOUSE) {
-            const int deltaX = rawInput.data.mouse.lLastX;
-            const int deltaY = rawInput.data.mouse.lLastY;
 
-            data->m_MouseDeltaX = deltaX;
-            data->m_MouseDeltaY = deltaY;
+            data->m_MouseDeltaX = data->m_MouseGlobalPosX - rawInput.data.mouse.lLastX;
+            data->m_MouseDeltaY = data->m_MouseGlobalPosY - rawInput.data.mouse.lLastY;
+
+            data->m_MouseGlobalPosX = rawInput.data.mouse.lLastX;
+            data->m_MouseGlobalPosY = rawInput.data.mouse.lLastY;
         }
 
         break;
