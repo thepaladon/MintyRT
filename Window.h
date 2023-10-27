@@ -20,6 +20,7 @@ struct WindowData
 	int m_MouseGlobalPosX;
 	int m_MouseGlobalPosY;
 
+	bool m_Keys[0xff];
 };
 
 class Window
@@ -43,6 +44,7 @@ public:
 	uint32_t GetWidth() const { return m_WindowData.m_Width; }
 	float GetMouseDeltaX() const { return m_WindowData.m_MouseDeltaX; }
 	float GetMouseDeltaY() const { return m_WindowData.m_MouseDeltaY; }
+	bool GetKey(int key) const { return m_WindowData.m_Keys[key]; }
 	uint32_t GetAlignedWidth() const;
 	uint32_t GetAlignedHeight() const;
 	bool GetIsResized() const { return m_WindowData.m_Resized; }

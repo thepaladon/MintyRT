@@ -1,6 +1,7 @@
 #include "Window.h"
 
 #include <cassert>
+#include <map>
 #include <vector_types.h>
 #include <Windows.h>
 #include <Windowsx.h>
@@ -145,6 +146,18 @@ void Window::Shutdown()
 }
 
 
+// Define a map to associate key codes with key names
+std::map<int, std::wstring> keyMap = {
+    {VK_LEFT, L"Left Arrow"},
+    {VK_RIGHT, L"Right Arrow"},
+    {VK_UP, L"Up Arrow"},
+    {VK_DOWN, L"Down Arrow"},
+    {VK_SPACE, L"Space"},
+    {VK_RETURN, L"Enter"}
+};
+
+
+
 // Dispatches messages or events
 LRESULT WINAPI WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
 {
@@ -193,10 +206,23 @@ LRESULT WINAPI WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
             data->m_MouseGlobalPosY = rawInput.data.mouse.lLastY;
         }
 
-        break;
-    }
+    } break;
+    case WM_KEYDOWN:
+    {
+        // Handle key press events
+        const int key = static_cast<int>(wParam);
+        data->m_Keys[key] = true;
+    } break;
+
+
+    case WM_KEYUP:
+    {
+	    const int key = static_cast<int>(wParam);
+        data->m_Keys[key] = false;
+    } break;
 
     }
+	
     return DefWindowProc(hWnd, msg, wParam, lParam);
 }
 

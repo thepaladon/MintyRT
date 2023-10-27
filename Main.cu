@@ -130,7 +130,7 @@ int main()
     // Output FB
     bool running = true;
 
-	Camera cam(glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 1.0f, 0.0f), glm::radians(90.f), float(alignedX) / float(alignedY));
+	Camera cam(glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 0.0f, 0.0f), glm::radians(90.f), float(alignedX) / float(alignedY));
 
 
     while (running)
@@ -143,16 +143,48 @@ int main()
     	start_time = std::chrono::high_resolution_clock::now();
 
 
-        const float sensitivity = 0.01f;
+        const float sensitivity = 0.1f;
 
         float m_dtx = m_Window->GetMouseDeltaX() * sensitivity;
         float m_dty = m_Window->GetMouseDeltaY() * sensitivity;
 
-        printf("%f, %f \n", m_dtx, m_dty);
+
+        if (m_Window->GetKey('W'))
+        {
+            cam.MoveFwd(1.0f);
+        }
+
+        if (m_Window->GetKey('S'))
+        {
+            cam.MoveFwd(-1.0f);
+        }
+
+        if (m_Window->GetKey('D'))
+        {
+            cam.MoveRight(1.0f);
+        }
+
+        if (m_Window->GetKey('A'))
+        {
+            cam.MoveRight(-1.0f);
+        }
+
+        if (m_Window->GetKey('R'))
+        {
+            cam.MoveUp(1.0f);
+        }
+
+    	if (m_Window->GetKey('F'))
+        {
+            cam.MoveUp(-1.0f);
+        }
+
         cam.SetPitch(m_dty);
         cam.SetYaw(m_dtx);
-        
-        cam.UpdateCamera();
+    	cam.UpdateCamera();
+
+        printf("Pos - X: %f, Y: %f, Z : %f \n", cam.m_Pos.x, cam.m_Pos.y, cam.m_Pos.z );
+        printf("Pitch: %f, Yaw: %f, Roll: %f \n \n", cam.m_PitchYawRoll.x, cam.m_PitchYawRoll.y, cam.m_PitchYawRoll.z );
 
         running = m_Window->OnUpdate();
 
