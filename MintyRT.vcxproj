@@ -91,6 +91,10 @@
     <CudaCompile Include="Src\Main.cu" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="External\stb\stb_image.h" />
+    <ClInclude Include="External\stb\stb_image_write.h" />
+    <ClInclude Include="External\TinyglTF\json.hpp" />
+    <ClInclude Include="External\TinyglTF\tiny_gltf.h" />
     <ClInclude Include="Src\Camera.cuh" />
     <ClInclude Include="External\glm\common.hpp" />
     <ClInclude Include="External\glm\detail\compute_common.hpp" />
@@ -387,6 +391,11 @@
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="External\glm\detail\glm.cpp" />
+    <ClCompile Include="External\stb\stb_image.cpp" />
+    <ClCompile Include="External\stb\stb_image_write.cpp" />
+    <ClCompile Include="External\TinyglTF\tiny_gltf.cpp" />
+    <ClCompile Include="Src\ModelLoading\Buffer.cpp" />
+    <ClCompile Include="Src\ModelLoading\Image.cpp" />
     <ClCompile Include="Src\ModelLoading\Material.cpp" />
     <ClCompile Include="Src\ModelLoading\Mesh.cpp" />
     <ClCompile Include="Src\ModelLoading\Model.cpp" />

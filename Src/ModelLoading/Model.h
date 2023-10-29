@@ -4,7 +4,7 @@
 #include <string>
 #include "glm/glm.hpp"
 
-namespace ModelLoader {
+namespace bml {
 
 	struct Material;
 	struct Image;

@@ -6,7 +6,7 @@ namespace tinygltf
 	class Model;
 }
 
-namespace Ball {
+namespace bml {
 	class Primitive;
 
 	class Mesh

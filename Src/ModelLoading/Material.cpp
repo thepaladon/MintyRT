@@ -2,7 +2,7 @@
 
 #include <TinyglTF/tiny_gltf.h>
 
-namespace Ball
+namespace bml
 {
 
 	Material::Material(const tinygltf::Model& model, int index)

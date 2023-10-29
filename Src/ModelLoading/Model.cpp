@@ -1,7 +1,6 @@
 #include "Model.h"
 
 #include <filesystem>
-#include <utility>
 
 #include <glm/glm.hpp>
 #include <glm/gtx/quaternion.hpp>
@@ -12,11 +11,9 @@
 #include "Image.h"
 #include "Mesh.h"
 
-#define STB_IMAGE_IMPLEMENTATION
-#include <stb/stb_image.h>
 #include <TinyglTF/tiny_gltf.h>
 
-namespace Ball {
+namespace bml {
 
 	bool StringEndsWith(const std::string& subject, const std::string& suffix)
 	{
@@ -189,10 +186,6 @@ namespace Ball {
 		}
 		//END_TIMER_MSG(nodes, " - Nodes %lu", model.nodes.size());
 
-		//Create BLAS
-		auto blas = BLAS();
-		blas.CreateFromGLTFModel(*this);
-		m_BLAS = blas;
 
 		//END_TIMER_MSG(LoadingModel, "Finished Loading: %s", m_Filepath.c_str());
 		printf(" ------------------------------ \n \n");

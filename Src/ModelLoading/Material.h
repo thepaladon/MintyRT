@@ -6,7 +6,7 @@ namespace tinygltf
 	class Model;
 }
 
-namespace Ball {
+namespace bml {
 	// Struct is Used to upload data to GPU Material Buffer as well
 	// Total: 64 bytes
 	struct Material

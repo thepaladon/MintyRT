@@ -8,7 +8,7 @@ namespace tinygltf
 	struct Primitive;
 }
 
-namespace Ball {
+namespace bml {
 	class Primitive
 	{
 	public:

@@ -7,7 +7,7 @@ namespace tinygltf
 	class Model;
 }
 
-namespace Ball {
+namespace bml {
 	enum class BufferType;
 	enum class ComponentType;
 

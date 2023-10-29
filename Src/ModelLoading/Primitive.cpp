@@ -4,7 +4,7 @@
 #include <glm/ext/matrix_transform.hpp>
 #include <TinyglTF/tiny_gltf.h>
 
-namespace Ball {
+namespace bml {
 	Primitive::Primitive(const tinygltf::Primitive& primitive)
 	{
 		// Note: This gets set during the BLAS creation step from

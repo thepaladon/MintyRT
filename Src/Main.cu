@@ -13,6 +13,7 @@
 #include "Utils.h"
 
 #include "Window.h"
+#include "ModelLoading/Model.h"
 
 constexpr int FB_INIT_WIDTH = 1200; 
 constexpr int FB_INIT_HEIGHT= 800;
@@ -120,6 +121,7 @@ int main()
         cpu_fb = new uchar3[num_pixels];
     }
 
+    
     // Start the timer
     auto start_time = std::chrono::high_resolution_clock::now();
 	auto end_time = std::chrono::high_resolution_clock::now();
