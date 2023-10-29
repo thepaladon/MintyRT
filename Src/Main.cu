@@ -13,6 +13,7 @@
 #include "Utils.h"
 
 #include "Window.h"
+#include "ModelLoading/Buffer.h"
 #include "ModelLoading/Model.h"
 
 constexpr int FB_INIT_WIDTH = 1200; 
@@ -69,39 +70,41 @@ public:
     return false;
 }
 
-__device__ glm::vec3 color(Ray& r) {
+__device__ glm::vec3 color(Ray& r, const Triangle* tri_buff) {
 
-    glm::vec3 v0 = glm::vec3(0.0f, 1.0f, 1.0f);
-    glm::vec3 v1 = glm::vec3(.5f, 0.0f, 1.0f);
-    glm::vec3 v2 = glm::vec3(-.5f, 0.0f, 1.0f);
+    glm::vec3 v0 = glm::vec3(1.0f, 1.0f, 1.0f);
+    glm::vec3 v1 = glm::vec3(1.0f, 0.0f, 1.0f);
+    glm::vec3 v2 = glm::vec3(-1.0f, 0.0f, 1.0f);
+    glm::vec3 v3 = glm::vec3(-1.0f, -1.0f, 1.0f);
 
-    Triangle tri{ v0, v1, v2 } ;
+    Triangle tri{ v3, v1, v2 } ;
+    Triangle tri2{ v0, v1, v2 } ;
 
     glm::vec3 point(99000.0f);
     glm::vec3 normal(420.420f);
-    float t;
 
-
-    if (intersect_tri(r, &tri, 0))
+    for(int i = 0; i < 2; i++)
     {
-    	return { 1.0f, 0.0f, 0.0f };
+        if (intersect_tri(r, &tri_buff[i], 0))
+        {
+            return { 1.0f, (float)i, 0.0f };
+        }
     }
-    else {
-        glm::vec3 unit_direction = normalize(r.direction());
-        float t = 0.5f * (unit_direction.y + 1.0f);
-        return (1.0f - t) * glm::vec3(1.0f, 1.0f, 1.0f) + t * glm::vec3(0.5f, 0.7f, 1.0f);
 
-    }
+    glm::vec3 unit_direction = normalize(r.direction());
+    float t = 0.5f * (unit_direction.y + 1.0f);
+    return (1.0f - t) * glm::vec3(1.0f, 1.0f, 1.0f) + t * glm::vec3(0.5f, 0.7f, 1.0f);
+
 }
 
-__global__ void render(uchar3* fb, int max_x, int max_y, Camera cam) {
+__global__ void render(uchar3* fb, int max_x, int max_y, Camera cam, const Triangle* tris) {
 
     const int i = threadIdx.x + blockIdx.x * blockDim.x;
     const int j = threadIdx.y + blockIdx.y * blockDim.y;
     if ((i >= max_x) || (j >= max_y)) return;
     int pixel_index = j * max_x + i;
     Ray r = cam.generate((float)max_x, (float)max_y, (float)i, (float)j);
-    fb[pixel_index] = to_uchar3(color(r));
+    fb[pixel_index] = to_uchar3(color(r, tris));
 }
 
 
@@ -137,6 +140,28 @@ int main()
 
 	Camera cam(glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, glm::radians(-224.f), 0.0f), 75.f, float(alignedX) / float(alignedY));
 
+
+    glm::vec3 v0 = glm::vec3(1.0f, 1.0f, 1.0f);
+    glm::vec3 v1 = glm::vec3(1.0f, 0.0f, 1.0f);
+    glm::vec3 v2 = glm::vec3(-1.0f, 0.0f, 1.0f);
+    glm::vec3 v3 = glm::vec3(-1.0f, -1.0f, 1.0f);
+
+    
+    bml::Buffer* mybuffer = nullptr;
+    {
+        Triangle quad[2] = {
+            { v3, v1, v2 },
+            { v0, v1, v2 } };
+
+        Triangle* quadPtr = &quad[0];
+
+        mybuffer = new bml::Buffer(quadPtr, sizeof(Triangle), 2, "Triangle Buffer");
+    }
+
+    //Make sure everything is available before start of Render
+    cudaDeviceSynchronize();
+
+
     while (running)
     {
         // Note, resizing and moving the window won't be caught in DT because it happens in m_Window->Update()
@@ -155,8 +180,8 @@ int main()
         if (m_Window->GetKey(VK_UP)) { ver_inp = -1.0; }
         if (m_Window->GetKey(VK_DOWN)) { ver_inp = 1.0; }
 
-        const float m_dtx = hor_inp ;// m_Window->GetMouseDeltaX();
-        const float m_dty = ver_inp ;// m_Window->GetMouseDeltaY();
+        const float m_dtx = hor_inp ; // m_Window->GetMouseDeltaX();
+        const float m_dty = ver_inp ; // m_Window->GetMouseDeltaY();
 
         cam.dt = delta_time_ms;
         if (m_Window->GetKey('W'))
@@ -228,7 +253,8 @@ int main()
             gpu_fb, 
             alignedX, 
             alignedY, 
-            cam
+            cam,
+            static_cast<const Triangle*>(mybuffer->GetBufferDataPtr())
             );
         checkCudaErrors(cudaGetLastError());
         checkCudaErrors(cudaDeviceSynchronize());

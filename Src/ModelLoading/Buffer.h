@@ -36,6 +36,9 @@ namespace bml {
 		void* m_BufferHandle;
 		std::string m_Name = "DEFAULT_NAME_FOR_BUFFER";
 		uint32_t m_Stride = -1;		 // in Bytes
+		uint32_t m_NumElements = 0;
+		uint32_t m_SizeBytes = 0;
+
 	};
 
 
