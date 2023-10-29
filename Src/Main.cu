@@ -18,6 +18,8 @@
 constexpr int FB_INIT_WIDTH = 1200; 
 constexpr int FB_INIT_HEIGHT= 800;
 
+#define MODEL_FP(model) (std::string("Resources/Models/") + model + "/" + model + ".gltf")
+
 #define checkCudaErrors(val) check_cuda( (val), #val, __FILE__, __LINE__ )
 void check_cuda(cudaError_t result, char const* const func, const char* const file, int const line) {
     if (result) {
@@ -121,7 +123,10 @@ int main()
         cpu_fb = new uchar3[num_pixels];
     }
 
-    
+	const auto truck = new bml::Model(MODEL_FP("CesiumMilkTruck"));
+	const auto dmged_helm = new bml::Model(MODEL_FP("DamagedHelmet"));
+	const auto scifi_helm = new bml::Model(MODEL_FP("SciFiHelmet"));
+
     // Start the timer
     auto start_time = std::chrono::high_resolution_clock::now();
 	auto end_time = std::chrono::high_resolution_clock::now();
