@@ -14,10 +14,10 @@ Window::Window(uint32_t width, uint32_t height, std::string name)
 {
 
     // Initialize the window class.
-
     m_WindowData.m_Width = width;
     m_WindowData.m_Height = height;
     m_WindowData.m_Alive = true;
+    m_WindowData.m_WindowName = name;
 
     // Converting from string 
     const LPCSTR lName = name.c_str();
@@ -88,12 +88,15 @@ HBITMAP Window::CreateSampleDIB()
 
 
 
-bool Window::OnUpdate()
+bool Window::OnUpdate(float dt)
 {
     // Reset from last frame
     m_WindowData.m_Resized = false;
     m_WindowData.m_MouseDeltaX = 0;
     m_WindowData.m_MouseDeltaY = 0;
+
+    std::string name = m_WindowData.m_WindowName + " || " + std::to_string(dt) + " ms.";
+    SetWindowText(m_WindowHandle, name.c_str());
 
     //  Goes through all messages and events (to process input)
     MSG msg;

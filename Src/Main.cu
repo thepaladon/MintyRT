@@ -14,9 +14,8 @@
 
 #include "Window.h"
 
-
-constexpr int FB_WIDTH = 1200; 
-constexpr int FB_HEIGHT= 800;
+constexpr int FB_INIT_WIDTH = 1200; 
+constexpr int FB_INIT_HEIGHT= 800;
 
 #define checkCudaErrors(val) check_cuda( (val), #val, __FILE__, __LINE__ )
 void check_cuda(cudaError_t result, char const* const func, const char* const file, int const line) {
@@ -52,23 +51,20 @@ public:
     const float v = f * dot(ray.d, q);
     if (v < 0 || u + v > 1) return false;
     const float t = f * dot(edge2, q);
-    if (t > 0.0001f)
-    if (ray.t > t)
-    {
-        ray.t = t;
-        //ray->intersection.tri_hit = triIdx;
-        //ray->intersection.u = u;
-        //ray->intersection.v = v;
-        //ray->intersection.header_tri_count = header[0].tris_count;
-        //ray->intersection.geo_normal = cross(edge1, edge2);
+    if (t > 0.0001f) {
+        if (ray.t > t)
+        {
+            ray.t = t;
+            //ray->intersection.tri_hit = triIdx;
+            //ray->intersection.u = u;
+            //ray->intersection.v = v;
+            //ray->intersection.header_tri_count = header[0].tris_count;
+            //ray->intersection.geo_normal = cross(edge1, edge2);
+        }
+        return true;
     }
-    return true;
+    return false;
 }
-
-
-
-
-
 
 __device__ glm::vec3 color(Ray& r) {
 
@@ -106,10 +102,9 @@ __global__ void render(uchar3* fb, int max_x, int max_y, Camera cam) {
 }
 
 
-
 int main()
 {
-	auto* m_Window = new Window(FB_WIDTH, FB_HEIGHT, "Minty Cuda RT");
+	auto* m_Window = new Window(FB_INIT_WIDTH, FB_INIT_HEIGHT, "Minty Cuda RT");
 
     uchar3* gpu_fb;
     uchar3* cpu_fb = nullptr;
@@ -142,23 +137,21 @@ int main()
         end_time = std::chrono::high_resolution_clock::now();
         std::chrono::duration<float> delta_time_s = end_time - start_time; // in seconds
         run_timer_s += delta_time_s.count();
+        float delta_time_ms = delta_time_s.count() * 1000;
     	start_time = std::chrono::high_resolution_clock::now();
 
-
-        const float sensitivity = .5f;
-
+        // Replace with mouse controls once that is implemented in a good way.
         float hor_inp = 0;
         float ver_inp = 0;
-        if (m_Window->GetKey(VK_LEFT)) { hor_inp = 1.0; }
-        if (m_Window->GetKey(VK_RIGHT)) { hor_inp = -1.0; }
-        if (m_Window->GetKey(VK_UP)) { ver_inp = 1.0; }
-        if (m_Window->GetKey(VK_DOWN)) { ver_inp = -1.0; }
+        if (m_Window->GetKey(VK_LEFT)) { hor_inp = -1.0; }
+        if (m_Window->GetKey(VK_RIGHT)) { hor_inp = 1.0; }
+        if (m_Window->GetKey(VK_UP)) { ver_inp = -1.0; }
+        if (m_Window->GetKey(VK_DOWN)) { ver_inp = 1.0; }
 
+        const float m_dtx = hor_inp ;// m_Window->GetMouseDeltaX();
+        const float m_dty = ver_inp ;// m_Window->GetMouseDeltaY();
 
-        float m_dtx = hor_inp ;// m_Window->GetMouseDeltaX();
-        float m_dty = ver_inp ;// m_Window->GetMouseDeltaY();
-
-
+        cam.dt = delta_time_ms;
         if (m_Window->GetKey('W'))
         {
             cam.MoveFwd(1.0f);
@@ -194,14 +187,11 @@ int main()
     	cam.UpdateCamera();
 
         //printf(" %f          %f \n", m_dtx, m_dty );
+        //printf("Pos - X: %f, Y: %f, Z : %f \n", cam.m_Pos.x, cam.m_Pos.y, cam.m_Pos.z );
+        //auto rad = glm::degrees(cam.m_PitchYawRoll);
+    	//printf("Pitch: %f, Yaw: %f, Roll: %f \n \n", rad.x, rad.y, rad.z );
 
-        
-        printf("Pos - X: %f, Y: %f, Z : %f \n", cam.m_Pos.x, cam.m_Pos.y, cam.m_Pos.z );
-
-        auto rad = glm::degrees(cam.m_PitchYawRoll);
-    	printf("Pitch: %f, Yaw: %f, Roll: %f \n \n", rad.x, rad.y, rad.z );
-
-        running = m_Window->OnUpdate();
+        running = m_Window->OnUpdate(delta_time_ms);
 
         if (m_Window->GetIsResized()) {
             m_Window->CreateSampleDIB();
@@ -224,7 +214,6 @@ int main()
         int tx = 8;
         int ty = 8;
 
-        
         // Render our buffer
         dim3 blocks(alignedX / tx + 1, alignedY / ty + 1);
         dim3 threads(tx, ty);

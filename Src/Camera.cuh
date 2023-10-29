@@ -52,32 +52,30 @@ public:
 
     __host__ void MoveFwd(float input)
     {
-        m_Pos += -input * m_View * m_MoveScalar;
+        m_Pos += input * m_View * m_MoveScalar * dt;
     }
 
     __host__ void MoveUp(float input)
     {
-        m_Pos += glm::vec3(0.0f, 1.0f, 0.0f) * input * m_MoveScalar;
+        m_Pos += glm::vec3(0.0f, 1.0f, 0.0f) * input * m_MoveScalar * dt;
     }
 
     __host__ void MoveRight(float input)
     {
         const glm::vec3 right = glm::normalize(glm::cross(m_View, m_Up));
-        m_Pos += input * right * m_MoveScalar;
-
+        m_Pos += input * right * m_MoveScalar * dt;
     }
 
     __host__ void SetPitch(float input)
     {
-        m_PitchYawRoll.x += glm::radians(-input * m_ViewScalar);
+        m_PitchYawRoll.x += glm::radians(-input * m_ViewScalar * dt);
         m_PitchYawRoll.x = glm::clamp(m_PitchYawRoll.x, -glm::radians(90.0f), glm::radians(90.0f));
     }
 
     __host__ void SetYaw(float input)
     {
-        m_PitchYawRoll.y += glm::radians(-input * m_ViewScalar);
+        m_PitchYawRoll.y += glm::radians(-input * m_ViewScalar * dt);
     }
-
 
     // Generate Ray for pixel located a {x,y} on a image dimension {w,h}
     __device__ Ray generate(float w, float h, float x, float y) const {
@@ -104,6 +102,7 @@ public:
 
     glm::vec3 m_PitchYawRoll; // in Radians
 
-    float m_ViewScalar = 2.f;
-    float m_MoveScalar = 0.6f;
+    float dt = 1.0f;
+    float m_ViewScalar = 0.1f;
+    float m_MoveScalar = 0.02f;
 };

@@ -10,6 +10,7 @@ struct WindowData
 	// cpp is responsible to set these values when needed
 	bool m_Alive = true;
 	bool m_Resized = false;
+	std::string m_WindowName = "DEFAULT_NOT_SET";
 
 	uint32_t m_Width;
 	uint32_t m_Height;
@@ -31,7 +32,7 @@ public:
 	~Window() {};
 
 	// Is false when window has been destroyed
-	bool OnUpdate();
+	bool OnUpdate(float dt);
 	void RenderFb(void* fb);
 	void Shutdown();
 
