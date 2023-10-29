@@ -211,12 +211,12 @@ int main()
         }
 
         // Thread Groups
-        int tx = 8;
-        int ty = 8;
+        constexpr int tx = 8;
+        constexpr int ty = 8;
 
         // Render our buffer
-        dim3 blocks(alignedX / tx + 1, alignedY / ty + 1);
-        dim3 threads(tx, ty);
+        const dim3 blocks(alignedX / tx + 1, alignedY / ty + 1);
+        const dim3 threads(tx, ty);
         render << <blocks, threads >> > (
             gpu_fb, 
             alignedX, 

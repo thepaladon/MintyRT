@@ -374,12 +374,23 @@
     <ClInclude Include="External\glm\vec3.hpp" />
     <ClInclude Include="External\glm\vec4.hpp" />
     <ClInclude Include="External\glm\vector_relational.hpp" />
+    <ClInclude Include="Src\ModelLoading\Buffer.h" />
+    <ClInclude Include="Src\ModelLoading\GpuModelStruct.h" />
+    <ClInclude Include="Src\ModelLoading\Image.h" />
+    <ClInclude Include="Src\ModelLoading\Material.h" />
+    <ClInclude Include="Src\ModelLoading\Mesh.h" />
+    <ClInclude Include="Src\ModelLoading\Model.h" />
+    <ClInclude Include="Src\ModelLoading\Primitive.h" />
     <ClInclude Include="Src\Ray.cuh" />
     <ClInclude Include="Src\Utils.h" />
     <ClInclude Include="Src\Window.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="External\glm\detail\glm.cpp" />
+    <ClCompile Include="Src\ModelLoading\Material.cpp" />
+    <ClCompile Include="Src\ModelLoading\Mesh.cpp" />
+    <ClCompile Include="Src\ModelLoading\Model.cpp" />
+    <ClCompile Include="Src\ModelLoading\Primitive.cpp" />
     <ClCompile Include="Src\Window.cpp" />
   </ItemGroup>
   <ItemGroup>
