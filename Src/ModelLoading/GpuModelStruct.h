@@ -2,9 +2,6 @@
 
 //Math Types
 #include "glm/glm.hpp"
-typedef glm::mat4 float4x4;
-typedef glm::vec4 float4;
-typedef glm::vec3 float3;
 
 struct ModelInfo
 {
@@ -23,7 +20,7 @@ struct PrimitiveGPU
 	// Note: This gets set during the BLAS creation step from
 	// multiplying all Nodes to get into world space from vertex space
 	// It exists here because we need it on the GPU.
-	float4x4 m_Model = {};
+	glm::mat4x4 m_Model = {};
 
 	// Material Index
 	int m_MaterialIndex = -1;
@@ -50,12 +47,12 @@ struct MaterialGPU
 
 
 	// PBR Workflow (32 bytes)
-	float4 m_BaseColorFactor = float4(1.0f, 1.0f, 1.0f, 1.0f);				// 16 bytes
+	glm::vec4 m_BaseColorFactor = glm::vec4(1.0f, 1.0f, 1.0f, 1.0f);				// 16 bytes
 	float m_MetallicFactor = 1.f;														// 4 bytes
 	float m_RoughnessFactor = 1.f;														// 4 bytes
 
 	// Emissive (16 bytes)
-	float3 m_EmissiveFactor = float3(0.0f, 0.0f, 0.0f);						// 12 bytes
+	glm::vec3 m_EmissiveFactor = glm::vec3(0.0f, 0.0f, 0.0f);						// 12 bytes
 
 	// Ao Scale and Normal Scale
 	float m_AOStrength = 1.0f;															// 4 bytes

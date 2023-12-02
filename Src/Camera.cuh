@@ -1,5 +1,4 @@
 #pragma once
-#include <crt/host_defines.h>
 
 #include "Ray.cuh"
 
@@ -8,10 +7,6 @@
 #include <glm/geometric.hpp>
 
 constexpr float PI = 3.14159265359f;
-
-__host__ __device__ float degrees_to_radians(double degrees) {
-    return degrees * (PI / 180.0);
-}
 
 class Camera {
 

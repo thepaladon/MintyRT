@@ -1,6 +1,8 @@
 #pragma once
 #include <string>
 
+#include <cuda_runtime_api.h>
+
 namespace tinygltf
 {
 	struct Accessor;
@@ -21,7 +23,7 @@ namespace bml {
 		Buffer(const void* data, const size_t stride, const size_t count, const std::string& name);
 
 		//Constructing a Buffer from TinyGLTF Accessor
-		Buffer(const tinygltf::Model& document, const tinygltf::Accessor& accessor, std::string name);
+		Buffer(const tinygltf::Model& document, const tinygltf::Accessor& accessor, const std::string& name);
 
 		// Todo: Handle Buffer Deallocation
 

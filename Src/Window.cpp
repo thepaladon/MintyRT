@@ -5,8 +5,9 @@
 #include <vector_types.h>
 #include <Windows.h>
 #include <Windowsx.h>
-//----------------------------------------
+#include "Utils.h"
 
+//----------------------------------------
 
 LRESULT WINAPI WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam);
 
@@ -191,7 +192,6 @@ LRESULT WINAPI WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
         data->m_Width = width;
         data->m_Height = height;
         data->m_Resized = true;
-        printf("Resizing : %i : %i \n", width, height);
 
     } break;
 
@@ -230,7 +230,6 @@ LRESULT WINAPI WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
 }
 
 
-#include "Utils.h"
 constexpr uint32_t WIN_ALIGNMENT = 4;
 uint32_t Window::GetAlignedWidth() const
 {

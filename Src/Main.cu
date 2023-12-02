@@ -4,33 +4,22 @@
 
 #include <chrono>
 #include <cstdlib>
-#include <iostream>
 
-#include "Camera.cuh"
 #include "cuda_runtime.h"
 #include "device_launch_parameters.h"
 #include "Ray.cuh"
-#include "Utils.h"
 
 #include "Window.h"
 #include "ModelLoading/Buffer.h"
 #include "ModelLoading/Model.h"
 
+#include "Camera.cuh"
+#include "CudaUtils.cuh"
+
 constexpr int FB_INIT_WIDTH = 1200; 
 constexpr int FB_INIT_HEIGHT= 800;
 
 #define MODEL_FP(model) (std::string("Resources/Models/") + model + "/" + model + ".gltf")
-
-#define checkCudaErrors(val) check_cuda( (val), #val, __FILE__, __LINE__ )
-void check_cuda(cudaError_t result, char const* const func, const char* const file, int const line) {
-    if (result) {
-        std::cerr << "CUDA error = " << static_cast<unsigned int>(result) << " at " <<
-            file << ":" << line << " '" << func << "' \n";
-        // Make sure we call CUDA Device Reset before exiting
-        cudaDeviceReset();
-        exit(99);
-    }
-}
 
 struct Triangle
 {
@@ -70,9 +59,9 @@ public:
     return false;
 }
 
-__device__ glm::vec3 color(Ray& r, const Triangle* tri_buff) {
+__device__ glm::vec3 color(Ray& r, float* tri_buff, const int* idx, int num_tris) {
 
-    glm::vec3 v0 = glm::vec3(1.0f, 1.0f, 1.0f);
+    /*glm::vec3 v0 = glm::vec3(1.0f, 1.0f, 1.0f);
     glm::vec3 v1 = glm::vec3(1.0f, 0.0f, 1.0f);
     glm::vec3 v2 = glm::vec3(-1.0f, 0.0f, 1.0f);
     glm::vec3 v3 = glm::vec3(-1.0f, -1.0f, 1.0f);
@@ -81,13 +70,32 @@ __device__ glm::vec3 color(Ray& r, const Triangle* tri_buff) {
     Triangle tri2{ v0, v1, v2 } ;
 
     glm::vec3 point(99000.0f);
-    glm::vec3 normal(420.420f);
+    glm::vec3 normal(420.420f);*/
 
-    for(int i = 0; i < 2; i++)
+    for(int i = 0; i < 25; i++)
     {
-        if (intersect_tri(r, &tri_buff[i], 0))
+
+        float v0_x = tri_buff[idx[(i * 3) + 0] + 0];
+        float v0_y = tri_buff[idx[(i * 3) + 0] + 1];
+        float v0_z = tri_buff[idx[(i * 3) + 0] + 2];
+
+        float v1_x = tri_buff[idx[(i * 3) + 1] + 0];
+        float v1_y = tri_buff[idx[(i * 3) + 1] + 1];
+        float v1_z = tri_buff[idx[(i * 3) + 1] + 2];
+
+        float v2_x = tri_buff[idx[(i * 3) + 2] + 0];
+        float v2_y = tri_buff[idx[(i * 3) + 2] + 1];
+        float v2_z = tri_buff[idx[(i * 3) + 2] + 2];
+
+        glm::vec3 v0 = glm::vec3(v0_x, v0_y, v0_z);
+        glm::vec3 v1 = glm::vec3(v1_x, v1_y, v1_z);
+        glm::vec3 v2 = glm::vec3(v2_x, v2_y, v2_z);
+        
+        Triangle tri{ v0, v1, v2 };
+
+        if (intersect_tri(r, &tri, i))
         {
-            return { 1.0f, (float)i, 0.0f };
+            return { 1.0f, 0.0f, 0.0f };
         }
     }
 
@@ -97,14 +105,14 @@ __device__ glm::vec3 color(Ray& r, const Triangle* tri_buff) {
 
 }
 
-__global__ void render(uchar3* fb, int max_x, int max_y, Camera cam, const Triangle* tris) {
+__global__ void render(uchar3* fb, int max_x, int max_y, Camera cam, float* tris, const int* idx, int num_tris) {
 
     const int i = threadIdx.x + blockIdx.x * blockDim.x;
     const int j = threadIdx.y + blockIdx.y * blockDim.y;
     if ((i >= max_x) || (j >= max_y)) return;
     int pixel_index = j * max_x + i;
     Ray r = cam.generate((float)max_x, (float)max_y, (float)i, (float)j);
-    fb[pixel_index] = to_uchar3(color(r, tris));
+    fb[pixel_index] = to_uchar3(color(r, tris, idx, num_tris));
 }
 
 
@@ -126,8 +134,8 @@ int main()
         cpu_fb = new uchar3[num_pixels];
     }
 
-	const auto truck = new bml::Model(MODEL_FP("CesiumMilkTruck"));
-	const auto dmged_helm = new bml::Model(MODEL_FP("DamagedHelmet"));
+	// const auto truck = new bml::Model(MODEL_FP("CesiumMilkTruck"));
+	// const auto dmged_helm = new bml::Model(MODEL_FP("DamagedHelmet"));
 	const auto scifi_helm = new bml::Model(MODEL_FP("SciFiHelmet"));
 
     // Start the timer
@@ -139,7 +147,6 @@ int main()
     bool running = true;
 
 	Camera cam(glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, glm::radians(-224.f), 0.0f), 75.f, float(alignedX) / float(alignedY));
-
 
     glm::vec3 v0 = glm::vec3(1.0f, 1.0f, 1.0f);
     glm::vec3 v1 = glm::vec3(1.0f, 0.0f, 1.0f);
@@ -161,6 +168,11 @@ int main()
     //Make sure everything is available before start of Render
     cudaDeviceSynchronize();
 
+ 	
+ 	const void* idx_buffer = scifi_helm->GetBuffers()[0]->GetBufferDataPtr();
+    int num_tris = scifi_helm->GetBuffers()[0]->GetNumElements() / 3;
+    int test = sizeof(glm::vec3);
+    int test2 = sizeof(int);
 
     while (running)
     {
@@ -254,8 +266,11 @@ int main()
             alignedX, 
             alignedY, 
             cam,
-            static_cast<const Triangle*>(mybuffer->GetBufferDataPtr())
+            (float*)(scifi_helm->GetBuffers()[1]->GetBufferDataPtr()),
+            (int*)(idx_buffer),
+            num_tris
             );
+
         checkCudaErrors(cudaGetLastError());
         checkCudaErrors(cudaDeviceSynchronize());
 
