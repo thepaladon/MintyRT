@@ -58,9 +58,9 @@ namespace bml {
             const auto u32_from_u8 = ConvertTo32BitIndices(data_loc, accessor.count);
             checkCudaErrors(cudaMemcpy(m_BufferHandle, u32_from_u8.data(), m_SizeBytes, cudaMemcpyHostToDevice));
         }
-
-        checkCudaErrors(cudaMemcpy(m_BufferHandle, data_loc, m_SizeBytes, cudaMemcpyHostToDevice));
-
+        else {
+            checkCudaErrors(cudaMemcpy(m_BufferHandle, data_loc, m_SizeBytes, cudaMemcpyHostToDevice));
+        }
 
         printf("Created CUDA Buffer:  %s\n", name.c_str());
         printf(" - GPU Location : %p \n", m_BufferHandle);

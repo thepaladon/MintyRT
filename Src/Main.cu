@@ -29,7 +29,7 @@ public:
     glm::vec3 vertex2;
 };
 
- __device__ bool intersect_tri(Ray& ray, const Triangle* tris, glm::uint triIdx)
+__device__ bool intersect_tri(Ray& ray, const Triangle* tris, glm::uint triIdx)
 {
     const glm::vec3 edge1 = tris[triIdx].vertex1 - tris[triIdx].vertex0;
     const glm::vec3 edge2 = tris[triIdx].vertex2 - tris[triIdx].vertex0;
@@ -61,24 +61,23 @@ public:
 
 __device__ glm::vec3 color(Ray& r, const float* vertex, const unsigned* idx, unsigned long long  num_tris, bool bruuh) {
 
-    [[unroll]]
-    for(int i = 0; i < 50; i++)
+    for(int i = 0; i < num_tris; i++)
     {
-        auto& i0 = idx[i * 3 + 0];
-        auto& i1 = idx[i * 3 + 1];
-        auto& i2 = idx[i * 3 + 2];
+        auto i0 = idx[i * 3 + 0];
+        auto i1 = idx[i * 3 + 1];
+        auto i2 = idx[i * 3 + 2];
         
-        auto& v0x = vertex[i0 * 3 + 0];
-        auto& v0y = vertex[i0 * 3 + 1];
-        auto& v0z = vertex[i0 * 3 + 2];
+        auto v0x = vertex[i0 * 3 + 0];
+        auto v0y = vertex[i0 * 3 + 1];
+        auto v0z = vertex[i0 * 3 + 2];
 
-        auto& v1x = vertex[i1 * 3 + 0];
-        auto& v1y = vertex[i1 * 3 + 1];
-        auto& v1z = vertex[i1 * 3 + 2];
+        auto v1x = vertex[i1 * 3 + 0];
+        auto v1y = vertex[i1 * 3 + 1];
+        auto v1z = vertex[i1 * 3 + 2];
 
-        auto& v2x = vertex[i2 * 3 + 0];
-        auto& v2y = vertex[i2 * 3 + 1];
-        auto& v2z = vertex[i2 * 3 + 2];
+        auto v2x = vertex[i2 * 3 + 0];
+        auto v2y = vertex[i2 * 3 + 1];
+        auto v2z = vertex[i2 * 3 + 2];
 
         glm::vec3 v0 = glm::vec3(v0x, v0y, v0z);
         glm::vec3 v1 = glm::vec3(v1x, v1y, v1z);
@@ -86,14 +85,7 @@ __device__ glm::vec3 color(Ray& r, const float* vertex, const unsigned* idx, uns
         
         Triangle tri{ v0, v1, v2 };
 
-        if (bruuh) {
-            printf("Triangle Eval : %i, %i, %i \n", i0, i1, i2);
-            printf("Vertex 0 Eval : %f, %f, %f \n", v0.x, v0.y, v0.z);
-            printf("Vertex 1 Eval : %f, %f, %f \n", v1.x, v1.y, v1.z);
-            printf("Vertex 2 Eval : %f, %f, %f \n", v2.x, v2.y, v2.z);
-        }
-
-        if (intersect_tri(r, &tri, i))
+        if (intersect_tri(r, &tri, 0))
         {
             return { 1.0f, 0.0f, 0.0f };
         }
@@ -137,9 +129,11 @@ int main()
         cpu_fb = new uchar3[num_pixels];
     }
 
+
 	// const auto truck = new bml::Model(MODEL_FP("CesiumMilkTruck"));
-	// const auto dmged_helm = new bml::Model(MODEL_FP("DamagedHelmet"));
-	const auto scifi_helm = new bml::Model(MODEL_FP("SciFiHelmet"));
+	 //const auto dmged_helm = new bml::Model(MODEL_FP("DamagedHelmet"));
+	 const auto sahhhduh = new bml::Model(MODEL_FP("sah_test"));
+	//const auto scifi_helm = new bml::Model(MODEL_FP("SciFiHelmet"));
 
     // Start the timer
     auto start_time = std::chrono::high_resolution_clock::now();
@@ -157,25 +151,36 @@ int main()
     glm::vec3 v3 = glm::vec3(-1.0f, -1.0f, 1.0f);
 
     
-    bml::Buffer* mybuffer = nullptr;
+    bml::Buffer* vert_buff = nullptr;
+    bml::Buffer* idx_buff = nullptr;
     {
-        Triangle quad[2] = {
+
+        glm::vec3 vert[4] = 
+            { v0, v1, v2, v3 };
+
+        /*
+        glm::vec3 quad[4] = {
             { v3, v1, v2 },
             { v0, v1, v2 } };
+        */
 
-        Triangle* quadPtr = &quad[0];
+        int idx[6] = { 3, 1, 2, 2, 1, 0};
 
-      //  mybuffer = new bml::Buffer(quadPtr, sizeof(Triangle), 2, "Triangle Buffer");
+        vert_buff = new bml::Buffer(vert, sizeof(glm::vec3), 4, "Vertex Buffer");
+        idx_buff = new bml::Buffer(idx, sizeof(int), 6, "Idx Buffer");
     }
 
     //Make sure everything is available before start of Render
     checkCudaErrors(cudaGetLastError());
     checkCudaErrors(cudaDeviceSynchronize());
-    
- 	
- 	const void* vrtx_buffer = scifi_helm->GetBuffers()[1]->GetBufferDataPtr();
- 	const void* idx_buffer = scifi_helm->GetBuffers()[0]->GetBufferDataPtr();
-    const unsigned long long num_tris = scifi_helm->GetBuffers()[0]->GetNumElements() / 3;
+
+    // const void* vrtx_buffer = vert_buff->GetBufferDataPtr();
+    // const void* idx_buffer = idx_buff->GetBufferDataPtr();
+    // const unsigned long long num_tris = 2;
+
+ 	const void* vrtx_buffer = sahhhduh->GetBuffers()[0]->GetBufferDataPtr();
+ 	const void* idx_buffer = sahhhduh->GetBuffers()[3]->GetBufferDataPtr();
+    const unsigned long long num_tris = sahhhduh->GetBuffers()[0]->GetNumElements() / 3;
 
 
     while (running)
