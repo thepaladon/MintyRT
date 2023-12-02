@@ -16,6 +16,9 @@ __host__ __device__ inline uchar3 to_uchar3(glm::vec3 val)
 static void check_cuda(cudaError_t result, char const* const func, const char* const file, int const line) {
 	if (result) {
 		printf("CUDA error %i = %s at %s : %i \n", result, func, file, line);
+		const auto errorMessage = cudaGetErrorString(result);
+		printf("Error Message: %s \n", errorMessage);
+
 		// Make sure we call CUDA Device Reset before exiting
 		cudaDeviceReset();
 		exit(99);

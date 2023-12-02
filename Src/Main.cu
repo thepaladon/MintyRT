@@ -21,7 +21,7 @@ constexpr int FB_INIT_HEIGHT= 800;
 
 #define MODEL_FP(model) (std::string("Resources/Models/") + model + "/" + model + ".gltf")
 
-struct Triangle
+__device__ struct Triangle
 {
 public:
     glm::vec3 vertex0;
@@ -59,39 +59,39 @@ public:
     return false;
 }
 
-__device__ glm::vec3 color(Ray& r, float* tri_buff, const int* idx, int num_tris) {
+__device__ glm::vec3 color(Ray& r, const float* vertex, const unsigned* idx, unsigned long long  num_tris, bool bruuh) {
 
-    /*glm::vec3 v0 = glm::vec3(1.0f, 1.0f, 1.0f);
-    glm::vec3 v1 = glm::vec3(1.0f, 0.0f, 1.0f);
-    glm::vec3 v2 = glm::vec3(-1.0f, 0.0f, 1.0f);
-    glm::vec3 v3 = glm::vec3(-1.0f, -1.0f, 1.0f);
-
-    Triangle tri{ v3, v1, v2 } ;
-    Triangle tri2{ v0, v1, v2 } ;
-
-    glm::vec3 point(99000.0f);
-    glm::vec3 normal(420.420f);*/
-
-    for(int i = 0; i < 25; i++)
+    [[unroll]]
+    for(int i = 0; i < 50; i++)
     {
+        auto& i0 = idx[i * 3 + 0];
+        auto& i1 = idx[i * 3 + 1];
+        auto& i2 = idx[i * 3 + 2];
+        
+        auto& v0x = vertex[i0 * 3 + 0];
+        auto& v0y = vertex[i0 * 3 + 1];
+        auto& v0z = vertex[i0 * 3 + 2];
 
-        float v0_x = tri_buff[idx[(i * 3) + 0] + 0];
-        float v0_y = tri_buff[idx[(i * 3) + 0] + 1];
-        float v0_z = tri_buff[idx[(i * 3) + 0] + 2];
+        auto& v1x = vertex[i1 * 3 + 0];
+        auto& v1y = vertex[i1 * 3 + 1];
+        auto& v1z = vertex[i1 * 3 + 2];
 
-        float v1_x = tri_buff[idx[(i * 3) + 1] + 0];
-        float v1_y = tri_buff[idx[(i * 3) + 1] + 1];
-        float v1_z = tri_buff[idx[(i * 3) + 1] + 2];
+        auto& v2x = vertex[i2 * 3 + 0];
+        auto& v2y = vertex[i2 * 3 + 1];
+        auto& v2z = vertex[i2 * 3 + 2];
 
-        float v2_x = tri_buff[idx[(i * 3) + 2] + 0];
-        float v2_y = tri_buff[idx[(i * 3) + 2] + 1];
-        float v2_z = tri_buff[idx[(i * 3) + 2] + 2];
-
-        glm::vec3 v0 = glm::vec3(v0_x, v0_y, v0_z);
-        glm::vec3 v1 = glm::vec3(v1_x, v1_y, v1_z);
-        glm::vec3 v2 = glm::vec3(v2_x, v2_y, v2_z);
+        glm::vec3 v0 = glm::vec3(v0x, v0y, v0z);
+        glm::vec3 v1 = glm::vec3(v1x, v1y, v1z);
+        glm::vec3 v2 = glm::vec3(v2x, v2y, v2z);
         
         Triangle tri{ v0, v1, v2 };
+
+        if (bruuh) {
+            printf("Triangle Eval : %i, %i, %i \n", i0, i1, i2);
+            printf("Vertex 0 Eval : %f, %f, %f \n", v0.x, v0.y, v0.z);
+            printf("Vertex 1 Eval : %f, %f, %f \n", v1.x, v1.y, v1.z);
+            printf("Vertex 2 Eval : %f, %f, %f \n", v2.x, v2.y, v2.z);
+        }
 
         if (intersect_tri(r, &tri, i))
         {
@@ -105,14 +105,17 @@ __device__ glm::vec3 color(Ray& r, float* tri_buff, const int* idx, int num_tris
 
 }
 
-__global__ void render(uchar3* fb, int max_x, int max_y, Camera cam, float* tris, const int* idx, int num_tris) {
+__global__ void render(uchar3* fb, int max_x, int max_y, Camera cam, const float* vertex, const unsigned* idx, unsigned long long num_tris) {
 
     const int i = threadIdx.x + blockIdx.x * blockDim.x;
     const int j = threadIdx.y + blockIdx.y * blockDim.y;
     if ((i >= max_x) || (j >= max_y)) return;
+
     int pixel_index = j * max_x + i;
-    Ray r = cam.generate((float)max_x, (float)max_y, (float)i, (float)j);
-    fb[pixel_index] = to_uchar3(color(r, tris, idx, num_tris));
+    bool bruh = false;
+    if (pixel_index == 0) bruh = true;
+ 	Ray r = cam.generate((float)max_x, (float)max_y, (float)i, (float)j);
+    fb[pixel_index] = to_uchar3(color(r, vertex, idx, num_tris, bruh));
 }
 
 
@@ -162,17 +165,18 @@ int main()
 
         Triangle* quadPtr = &quad[0];
 
-        mybuffer = new bml::Buffer(quadPtr, sizeof(Triangle), 2, "Triangle Buffer");
+      //  mybuffer = new bml::Buffer(quadPtr, sizeof(Triangle), 2, "Triangle Buffer");
     }
 
     //Make sure everything is available before start of Render
-    cudaDeviceSynchronize();
-
+    checkCudaErrors(cudaGetLastError());
+    checkCudaErrors(cudaDeviceSynchronize());
+    
  	
+ 	const void* vrtx_buffer = scifi_helm->GetBuffers()[1]->GetBufferDataPtr();
  	const void* idx_buffer = scifi_helm->GetBuffers()[0]->GetBufferDataPtr();
-    int num_tris = scifi_helm->GetBuffers()[0]->GetNumElements() / 3;
-    int test = sizeof(glm::vec3);
-    int test2 = sizeof(int);
+    const unsigned long long num_tris = scifi_helm->GetBuffers()[0]->GetNumElements() / 3;
+
 
     while (running)
     {
@@ -258,18 +262,28 @@ int main()
         constexpr int tx = 8;
         constexpr int ty = 8;
 
+        checkCudaErrors(cudaGetLastError());
+        checkCudaErrors(cudaDeviceSynchronize());
+
+        // ToDo: Remove once weird bug is gone
+        cudaStream_t stream;
+        cudaStreamCreate(&stream);
+
         // Render our buffer
         const dim3 blocks(alignedX / tx + 1, alignedY / ty + 1);
         const dim3 threads(tx, ty);
-        render << <blocks, threads >> > (
+        render <<< blocks, threads, 0, stream>>> (
             gpu_fb, 
             alignedX, 
             alignedY, 
             cam,
-            (float*)(scifi_helm->GetBuffers()[1]->GetBufferDataPtr()),
-            (int*)(idx_buffer),
+            (const float*)(vrtx_buffer),
+            (const unsigned*)(idx_buffer),
             num_tris
             );
+
+        // Synchronize the stream
+        cudaStreamSynchronize(stream);
 
         checkCudaErrors(cudaGetLastError());
         checkCudaErrors(cudaDeviceSynchronize());

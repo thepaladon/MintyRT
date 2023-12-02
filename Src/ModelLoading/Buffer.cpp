@@ -6,9 +6,23 @@
 
 namespace bml {
 
+    // Indicies are one after another
+    // We group them by 3 manually
+    template <typename T>
+    std::vector<uint32_t> ConvertTo32BitIndices(const T* indices, size_t numIndices) {
+        std::vector<uint32_t> intIndices;
+        intIndices.reserve(numIndices);
+
+        for (size_t i = 0; i < numIndices; ++i) {
+            intIndices.push_back(static_cast<uint32_t>(indices[i]));
+        }
+
+        return intIndices;
+    }
+
+    
 	Buffer::Buffer(const tinygltf::Model& document, const tinygltf::Accessor& accessor, const std::string& name)
 	{
-        printf("Created CUDA Buffer:  %s\n", name.c_str());
 
         m_Name = name;
         const auto& view = document.bufferViews[accessor.bufferView];
@@ -16,15 +30,43 @@ namespace bml {
 
         const size_t comp_size_in_bytes  = tinygltf::GetComponentSizeInBytes(accessor.componentType);
         const size_t num_elements_in_stride = tinygltf::GetNumComponentsInType(accessor.type);
-        const size_t stride = comp_size_in_bytes * num_elements_in_stride;
+
+        // Dumb assumption for now
+    	//assert(comp_size_in_bytes == 4);
+
+    	const size_t stride = 4 * num_elements_in_stride;
         const size_t total_size_in_bytes  = stride * accessor.count;
+
+        const auto data_loc = &buffer.data.at(view.byteOffset + accessor.byteOffset);
 
         m_Stride = stride;
         m_NumElements = accessor.count;
 		m_SizeBytes = total_size_in_bytes;
 
+        
         checkCudaErrors(cudaMalloc(&m_BufferHandle, m_SizeBytes));
-        checkCudaErrors(cudaMemcpy(m_BufferHandle, &buffer.data.at(view.byteOffset + accessor.byteOffset), m_SizeBytes, cudaMemcpyHostToDevice));
+
+        // If buffer is not sizeof(uint32_t) then convert it to that
+        if (comp_size_in_bytes == 2)
+        {
+            const auto u32_from_u16 = ConvertTo32BitIndices(data_loc, accessor.count);
+            checkCudaErrors(cudaMemcpy(m_BufferHandle, u32_from_u16.data(), m_SizeBytes, cudaMemcpyHostToDevice));
+
+        }
+        else if (comp_size_in_bytes == 1)
+        {
+            const auto u32_from_u8 = ConvertTo32BitIndices(data_loc, accessor.count);
+            checkCudaErrors(cudaMemcpy(m_BufferHandle, u32_from_u8.data(), m_SizeBytes, cudaMemcpyHostToDevice));
+        }
+
+        checkCudaErrors(cudaMemcpy(m_BufferHandle, data_loc, m_SizeBytes, cudaMemcpyHostToDevice));
+
+
+        printf("Created CUDA Buffer:  %s\n", name.c_str());
+        printf(" - GPU Location : %p \n", m_BufferHandle);
+        printf(" - Stride : %llu \n", m_Stride);
+        printf(" - Elements : %llu \n", m_NumElements);
+        printf(" - Size : %llu \n \n", m_SizeBytes);
 
     }
 
@@ -48,15 +90,15 @@ namespace bml {
         return m_BufferHandle;
     }
 
-    uint32_t Buffer::GetNumElements() const {
+    size_t  Buffer::GetNumElements() const {
         return m_NumElements;
     }
 
-    uint32_t Buffer::GetStride() const {
+    size_t  Buffer::GetStride() const {
         return m_Stride;
     }
 
-    uint32_t Buffer::GetSizeBytes() const {
+    size_t  Buffer::GetSizeBytes() const {
         return m_SizeBytes;
     }
 

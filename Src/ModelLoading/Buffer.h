@@ -28,18 +28,18 @@ namespace bml {
 		// Todo: Handle Buffer Deallocation
 
 		const void* GetBufferDataPtr() const;
-		uint32_t GetNumElements() const;
-		uint32_t GetStride() const;			// in Bytes
-		uint32_t GetSizeBytes() const;		// in Bytes
+		size_t GetNumElements() const;
+		size_t GetStride() const;			// in Bytes
+		size_t GetSizeBytes() const;		// in Bytes
 		std::string GetName() const { return m_Name; }
 		void* GetGPUHandle() const { return m_BufferHandle; }
 	private:
 
 		void* m_BufferHandle;
 		std::string m_Name = "DEFAULT_NAME_FOR_BUFFER";
-		uint32_t m_Stride = -1;		 // in Bytes
-		uint32_t m_NumElements = 0;
-		uint32_t m_SizeBytes = 0;
+		size_t m_Stride = -1;		 // in Bytes
+		size_t m_NumElements = 0;
+		size_t m_SizeBytes = 0;
 
 	};
 
