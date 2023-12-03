@@ -97,6 +97,7 @@
     <CudaCompile Include="Src\Main.cu" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="Src\BLAS.h" />
     <ClInclude Include="External\stb\stb_image.h" />
     <ClInclude Include="External\stb\stb_image_write.h" />
     <ClInclude Include="External\TinyglTF\json.hpp" />
@@ -397,6 +398,7 @@
     <ClInclude Include="Src\Window.h" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="Src\BLAS.cpp" />
     <ClCompile Include="External\glm\detail\glm.cpp" />
     <ClCompile Include="External\stb\stb_image.cpp" />
     <ClCompile Include="External\stb\stb_image_write.cpp" />

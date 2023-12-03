@@ -43,7 +43,6 @@ namespace bml {
         m_NumElements = accessor.count;
 		m_SizeBytes = total_size_in_bytes;
 
-        
         checkCudaErrors(cudaMalloc(&m_BufferHandle, m_SizeBytes));
 
         // If buffer is not sizeof(uint32_t) then convert it to that
