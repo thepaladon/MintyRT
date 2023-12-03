@@ -29,15 +29,15 @@ public:
     glm::vec3 vertex2;
 };
 
-__device__ bool intersect_tri(Ray& ray, const Triangle* tris, glm::uint triIdx)
+__device__ bool intersect_tri(Ray& ray, const Triangle& tris)
 {
-    const glm::vec3 edge1 = tris[triIdx].vertex1 - tris[triIdx].vertex0;
-    const glm::vec3 edge2 = tris[triIdx].vertex2 - tris[triIdx].vertex0;
+    const glm::vec3 edge1 = tris.vertex1 - tris.vertex0;
+    const glm::vec3 edge2 = tris.vertex2 - tris.vertex0;
     const glm::vec3 h = cross(ray.d, edge2);
     const float a = dot(edge1, h);
     if (fabs(a) < 0.0001) return false; // ray parallel to triangle
     const float f = 1 / a;
-    const glm::vec3 s = ray.o - tris[triIdx].vertex0;
+    const glm::vec3 s = ray.o - tris.vertex0;
     const float u = f * dot(s, h);
     if (u < 0 || u > 1) return false;
     const glm::vec3 q = cross(s, edge1);
@@ -59,33 +59,33 @@ __device__ bool intersect_tri(Ray& ray, const Triangle* tris, glm::uint triIdx)
     return false;
 }
 
-__device__ glm::vec3 color(Ray& r, const float* vertex, const unsigned* idx, unsigned long long  num_tris, bool bruuh) {
+__device__ glm::vec3 color(Ray& r, const float* vertex, const unsigned* idx, unsigned long long  num_tris) {
 
-    for(int i = 0; i < num_tris; i++)
+    for (int i = 0; i < num_tris; i++)
     {
-        auto i0 = idx[i * 3 + 0];
-        auto i1 = idx[i * 3 + 1];
-        auto i2 = idx[i * 3 + 2];
+        const auto& i0 = idx[i * 3 + 0];
+        const auto& i1 = idx[i * 3 + 1];
+        const auto& i2 = idx[i * 3 + 2];
         
-        auto v0x = vertex[i0 * 3 + 0];
-        auto v0y = vertex[i0 * 3 + 1];
-        auto v0z = vertex[i0 * 3 + 2];
+        const auto& v0x = vertex[i0 * 3 + 0];
+        const auto& v0y = vertex[i0 * 3 + 1];
+        const auto& v0z = vertex[i0 * 3 + 2];
 
-        auto v1x = vertex[i1 * 3 + 0];
-        auto v1y = vertex[i1 * 3 + 1];
-        auto v1z = vertex[i1 * 3 + 2];
+    	const auto& v1x = vertex[i1 * 3 + 0];
+        const auto& v1y = vertex[i1 * 3 + 1];
+        const auto& v1z = vertex[i1 * 3 + 2];
 
-        auto v2x = vertex[i2 * 3 + 0];
-        auto v2y = vertex[i2 * 3 + 1];
-        auto v2z = vertex[i2 * 3 + 2];
+        const auto& v2x = vertex[i2 * 3 + 0];
+        const auto& v2y = vertex[i2 * 3 + 1];
+        const auto& v2z = vertex[i2 * 3 + 2];
 
-        glm::vec3 v0 = glm::vec3(v0x, v0y, v0z);
-        glm::vec3 v1 = glm::vec3(v1x, v1y, v1z);
-        glm::vec3 v2 = glm::vec3(v2x, v2y, v2z);
+        const glm::vec3& v0 = glm::vec3(v0x, v0y, v0z);
+        const glm::vec3& v1 = glm::vec3(v1x, v1y, v1z);
+        const glm::vec3& v2 = glm::vec3(v2x, v2y, v2z);
         
         Triangle tri{ v0, v1, v2 };
 
-        if (intersect_tri(r, &tri, 0))
+        if (intersect_tri(r, tri))
         {
             return { 1.0f, 0.0f, 0.0f };
         }
@@ -94,7 +94,6 @@ __device__ glm::vec3 color(Ray& r, const float* vertex, const unsigned* idx, uns
     glm::vec3 unit_direction = normalize(r.direction());
     float t = 0.5f * (unit_direction.y + 1.0f);
     return (1.0f - t) * glm::vec3(1.0f, 1.0f, 1.0f) + t * glm::vec3(0.5f, 0.7f, 1.0f);
-
 }
 
 __global__ void render(uchar3* fb, int max_x, int max_y, Camera cam, const float* vertex, const unsigned* idx, unsigned long long num_tris) {
@@ -104,10 +103,8 @@ __global__ void render(uchar3* fb, int max_x, int max_y, Camera cam, const float
     if ((i >= max_x) || (j >= max_y)) return;
 
     int pixel_index = j * max_x + i;
-    bool bruh = false;
-    if (pixel_index == 0) bruh = true;
  	Ray r = cam.generate((float)max_x, (float)max_y, (float)i, (float)j);
-    fb[pixel_index] = to_uchar3(color(r, vertex, idx, num_tris, bruh));
+    fb[pixel_index] = to_uchar3(color(r, vertex, idx, num_tris));
 }
 
 
@@ -129,11 +126,10 @@ int main()
         cpu_fb = new uchar3[num_pixels];
     }
 
-
 	// const auto truck = new bml::Model(MODEL_FP("CesiumMilkTruck"));
-	 //const auto dmged_helm = new bml::Model(MODEL_FP("DamagedHelmet"));
-	 const auto sahhhduh = new bml::Model(MODEL_FP("sah_test"));
-	//const auto scifi_helm = new bml::Model(MODEL_FP("SciFiHelmet"));
+	// const auto dmged_helm = new bml::Model(MODEL_FP("DamagedHelmet"));
+	const auto sahhhduh = new bml::Model(MODEL_FP("sah_test"));
+	// const auto scifi_helm = new bml::Model(MODEL_FP("SciFiHelmet"));
 
     // Start the timer
     auto start_time = std::chrono::high_resolution_clock::now();
@@ -147,9 +143,8 @@ int main()
 
     glm::vec3 v0 = glm::vec3(1.0f, 1.0f, 1.0f);
     glm::vec3 v1 = glm::vec3(1.0f, 0.0f, 1.0f);
-    glm::vec3 v2 = glm::vec3(-1.0f, 0.0f, 1.0f);
-    glm::vec3 v3 = glm::vec3(-1.0f, -1.0f, 1.0f);
-
+    glm::vec3 v2 = glm::vec3(0.0f, 1.0f, 1.0f);
+    glm::vec3 v3 = glm::vec3(0.0f, 0.0f, 1.0f);
     
     bml::Buffer* vert_buff = nullptr;
     bml::Buffer* idx_buff = nullptr;
@@ -182,7 +177,6 @@ int main()
  	const void* idx_buffer = sahhhduh->GetBuffers()[3]->GetBufferDataPtr();
     const unsigned long long num_tris = sahhhduh->GetBuffers()[0]->GetNumElements() / 3;
 
-
     while (running)
     {
         // Note, resizing and moving the window won't be caught in DT because it happens in m_Window->Update()
@@ -198,8 +192,8 @@ int main()
         float ver_inp = 0;
         if (m_Window->GetKey(VK_LEFT)) { hor_inp = -1.0; }
         if (m_Window->GetKey(VK_RIGHT)) { hor_inp = 1.0; }
-        if (m_Window->GetKey(VK_UP)) { ver_inp = -1.0; }
-        if (m_Window->GetKey(VK_DOWN)) { ver_inp = 1.0; }
+        if (m_Window->GetKey(VK_UP)) { ver_inp = -1.0;   }
+        if (m_Window->GetKey(VK_DOWN)) { ver_inp = 1.0;  }
 
         const float m_dtx = hor_inp ; // m_Window->GetMouseDeltaX();
         const float m_dty = ver_inp ; // m_Window->GetMouseDeltaY();
@@ -267,17 +261,11 @@ int main()
         constexpr int tx = 8;
         constexpr int ty = 8;
 
-        checkCudaErrors(cudaGetLastError());
-        checkCudaErrors(cudaDeviceSynchronize());
-
-        // ToDo: Remove once weird bug is gone
-        cudaStream_t stream;
-        cudaStreamCreate(&stream);
 
         // Render our buffer
         const dim3 blocks(alignedX / tx + 1, alignedY / ty + 1);
         const dim3 threads(tx, ty);
-        render <<< blocks, threads, 0, stream>>> (
+        render <<< blocks, threads >>> (
             gpu_fb, 
             alignedX, 
             alignedY, 
@@ -287,8 +275,7 @@ int main()
             num_tris
             );
 
-        // Synchronize the stream
-        cudaStreamSynchronize(stream);
+
 
         checkCudaErrors(cudaGetLastError());
         checkCudaErrors(cudaDeviceSynchronize());

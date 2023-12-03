@@ -37,7 +37,7 @@ namespace bml {
     	const size_t stride = 4 * num_elements_in_stride;
         const size_t total_size_in_bytes  = stride * accessor.count;
 
-        const auto data_loc = &buffer.data.at(view.byteOffset + accessor.byteOffset);
+        const void* data_loc = &buffer.data.at(view.byteOffset + accessor.byteOffset);
 
         m_Stride = stride;
         m_NumElements = accessor.count;
@@ -49,13 +49,14 @@ namespace bml {
         // If buffer is not sizeof(uint32_t) then convert it to that
         if (comp_size_in_bytes == 2)
         {
-            const auto u32_from_u16 = ConvertTo32BitIndices(data_loc, accessor.count);
+            printf("[Warning]: Resizing Index Buffer from uint16_t to uint32_t! \n");
+            const auto u32_from_u16 = ConvertTo32BitIndices((uint16_t*)data_loc, accessor.count);
             checkCudaErrors(cudaMemcpy(m_BufferHandle, u32_from_u16.data(), m_SizeBytes, cudaMemcpyHostToDevice));
-
         }
         else if (comp_size_in_bytes == 1)
         {
-            const auto u32_from_u8 = ConvertTo32BitIndices(data_loc, accessor.count);
+            printf("[Warning]: Resizing Index Buffer from uint8_t to uint32_t! \n");
+            const auto u32_from_u8 = ConvertTo32BitIndices((uint8_t*)data_loc, accessor.count);
             checkCudaErrors(cudaMemcpy(m_BufferHandle, u32_from_u8.data(), m_SizeBytes, cudaMemcpyHostToDevice));
         }
         else {
@@ -63,16 +64,15 @@ namespace bml {
         }
 
         printf("Created CUDA Buffer:  %s\n", name.c_str());
-        printf(" - GPU Location : %p \n", m_BufferHandle);
-        printf(" - Stride : %llu \n", m_Stride);
-        printf(" - Elements : %llu \n", m_NumElements);
-        printf(" - Size : %llu \n \n", m_SizeBytes);
+        printf("    - GPU Location : 0x%p \n", m_BufferHandle);
+        printf("    - Stride : %llu \n", m_Stride);
+        printf("    - Elements : %llu \n", m_NumElements);
+        printf("    - Size : %llu \n \n", m_SizeBytes);
 
     }
 
 	Buffer::Buffer(const void* data, const size_t stride, const size_t count, const std::string& name)
 	{
-
         m_Name = name;
         m_Stride = static_cast<uint32_t>(stride);
         m_NumElements = static_cast<uint32_t>(count);
