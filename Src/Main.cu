@@ -5,6 +5,7 @@
 #include <chrono>
 #include <cstdlib>
 
+#include "BLAS.h"
 #include "cuda_runtime.h"
 #include "device_launch_parameters.h"
 #include "Ray.cuh"
@@ -29,34 +30,32 @@ public:
     glm::vec3 vertex2;
 };
 
-__device__ bool intersect_tri(Ray& ray, const Triangle& tris)
+__device__ void intersect_tri(Ray& ray, const Triangle& tris)
 {
     const glm::vec3 edge1 = tris.vertex1 - tris.vertex0;
     const glm::vec3 edge2 = tris.vertex2 - tris.vertex0;
-    const glm::vec3 h = cross(ray.d, edge2);
+    const glm::vec3 h = cross(ray.dir, edge2);
     const float a = dot(edge1, h);
-    if (fabs(a) < 0.0001) return false; // ray parallel to triangle
+    if (fabs(a) < .0001f) return; // ray parallel to triangle
     const float f = 1 / a;
-    const glm::vec3 s = ray.o - tris.vertex0;
+    const glm::vec3 s = ray.org - tris.vertex0;
     const float u = f * dot(s, h);
-    if (u < 0 || u > 1) return false;
+    if (u < 0 || u > 1) return;
     const glm::vec3 q = cross(s, edge1);
-    const float v = f * dot(ray.d, q);
-    if (v < 0 || u + v > 1) return false;
+    const float v = f * dot(ray.dir, q);
+    if (v < 0 || u + v > 1) return;
     const float t = f * dot(edge2, q);
-    if (t > 0.0001f) {
+    if (t > 0.0001f) { // T Has to be positive
         if (ray.t > t)
         {
             ray.t = t;
+            ray.hit = true;
             //ray->intersection.tri_hit = triIdx;
             //ray->intersection.u = u;
             //ray->intersection.v = v;
-            //ray->intersection.header_tri_count = header[0].tris_count;
-            //ray->intersection.geo_normal = cross(edge1, edge2);
+            ray.normal = cross(edge1, edge2);
         }
-        return true;
     }
-    return false;
 }
 
 __device__ glm::vec3 color(Ray& r, const float* vertex, const unsigned* idx, unsigned long long  num_tris) {
@@ -85,13 +84,15 @@ __device__ glm::vec3 color(Ray& r, const float* vertex, const unsigned* idx, uns
         
         Triangle tri{ v0, v1, v2 };
 
-        if (intersect_tri(r, tri))
-        {
-            return { 1.0f, 0.0f, 0.0f };
-        }
+        intersect_tri(r, tri);
     }
 
-    glm::vec3 unit_direction = normalize(r.direction());
+    if(r.hit == true)
+    {
+        return { r.normal };
+    }
+
+    const glm::vec3 unit_direction = normalize(r.dir);
     float t = 0.5f * (unit_direction.y + 1.0f);
     return (1.0f - t) * glm::vec3(1.0f, 1.0f, 1.0f) + t * glm::vec3(0.5f, 0.7f, 1.0f);
 }
@@ -176,6 +177,15 @@ int main()
  	const void* vrtx_buffer = sahhhduh->GetBuffers()[0]->GetBufferDataPtr();
  	const void* idx_buffer = sahhhduh->GetBuffers()[3]->GetBufferDataPtr();
     const unsigned long long num_tris = sahhhduh->GetBuffers()[0]->GetNumElements() / 3;
+
+    BLASInput blasInput;
+    blasInput.vertex = sahhhduh->GetBuffers()[0];
+    blasInput.index  = sahhhduh->GetBuffers()[3];
+    blasInput.transform = glm::identity<glm::mat4>();
+    std::vector<BLASInput> blastestis;
+    blastestis.push_back(blasInput);
+
+    BLAS blastest(blastestis);
 
     while (running)
     {
