@@ -2,6 +2,7 @@
 
 #pragma once
 
+#include <crt/host_defines.h>
 #include <glm/glm.hpp>
 
 class Ray

@@ -1,6 +1,7 @@
 #pragma once
 #include <vector>
 
+#include "Ray.cuh"
 #include "glm/vec3.hpp"
 #include "glm/matrix.hpp"
 #include "ModelLoading/Buffer.h"
@@ -25,6 +26,8 @@ struct BLASNode
 	AABB aabb;
 	int leftFirst;
 	int count;
+
+	bool isLeaf() { return count > 0; }
 };
 
 class BLAS
@@ -38,6 +41,7 @@ private:
 
 	void Subdivide(glm::uint nodeIdx);
 	void PrecomputeAABB(std::vector<AABB>& temp_aabb, const std::vector<glm::vec3>& vertices, const  std::vector<glm::ivec3>& indices);
+	void IntersectBVH(Ray& ray, glm::uint nodeIdx);
 
 	int m_NodesUsed = 0;
 	BLASNode* m_RootNode;

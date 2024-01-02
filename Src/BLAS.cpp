@@ -3,6 +3,7 @@
 #include <algorithm>
 
 #include "CudaUtils.cuh"
+#include "Ray.cuh"
 #include "glm/common.hpp"
 
 // Credit to:
@@ -104,7 +105,33 @@ void BLAS::PrecomputeAABB(std::vector<AABB>& temp_aabb, const std::vector<glm::v
 
 }
 
+bool IntersectAABB(const Ray& ray, const glm::vec3 bmin, const glm::vec3 bmax)
+{
+	float tx1 = (bmin.x - ray.org.x) / ray.dir.x, tx2 = (bmax.x - ray.org.x) / ray.dir.x;
+	float tmin = glm::min(tx1, tx2), tmax = glm::max(tx1, tx2);
+	float ty1 = (bmin.y - ray.org.y) / ray.dir.y, ty2 = (bmax.y - ray.org.y) / ray.dir.y;
+	tmin = glm::max(tmin, glm::min(ty1, ty2)), tmax = glm::min(tmax, glm::max(ty1, ty2));
+	float tz1 = (bmin.z - ray.org.z) / ray.dir.z, tz2 = (bmax.z - ray.org.z) / ray.dir.z;
+	tmin = glm::max(tmin, glm::min(tz1, tz2)), tmax = glm::min(tmax, glm::max(tz1, tz2));
+	return tmax >= tmin && tmin < ray.t && tmax > 0;
+}
 
+void BLAS::IntersectBVH(Ray& ray, const glm::uint nodeIdx)
+{
+	BLASNode& node = m_Nodes[nodeIdx];
+	if (!IntersectAABB(ray, node.aabb.min, node.aabb.max)) return;
+
+	if (node.isLeaf())
+	{
+		for (glm::uint i = 0; i < node.count; i++) {}
+			// nada yet //IntersectTri(ray, tri[triIdx[node.firstTriIdx + i]]);
+	}
+	else
+	{
+		IntersectBVH(ray, node.leftFirst);
+		IntersectBVH(ray, node.leftFirst + 1);
+	}
+}
 
 void BLAS::Subdivide(glm::uint nodeIdx)
 {
@@ -120,18 +147,18 @@ void BLAS::Subdivide(glm::uint nodeIdx)
 	const float splitPos = node.aabb.min[axis] + extent[axis] * 0.5f;
 
 	// in-place partition
-	int i = node.leftFirst;
-	int j = i + node.count - 1;
-	while (i <= j)
+	int start = node.leftFirst;
+	int end = start + node.count - 1;
+	while (start <= end)
 	{
-		if (temp_aabb[m_TriIndices[i]].centroid()[axis] < splitPos)
-			i++;
+		if (temp_aabb[m_TriIndices[start]].centroid()[axis] < splitPos)
+			start++;
 		else
-			std::swap(m_TriIndices[i], m_TriIndices[j--]);
+			std::swap(m_TriIndices[start], m_TriIndices[end--]);
 	}
 
 	// abort split if one of the sides is empty
-	const int leftCount = i - node.leftFirst;
+	const int leftCount = start - node.leftFirst;
 	if (leftCount == 0 || leftCount == node.count) return;
 
 	// create child nodes
@@ -142,7 +169,7 @@ void BLAS::Subdivide(glm::uint nodeIdx)
 	m_Nodes[leftChildIdx].count = leftCount;
 	m_Nodes[leftChildIdx].aabb = combineAABBs(temp_aabb.begin() + node.leftFirst, temp_aabb.begin() + node.leftFirst + leftCount);
 
-	m_Nodes[rightChildIdx].leftFirst = i;
+	m_Nodes[rightChildIdx].leftFirst = start;
 	m_Nodes[rightChildIdx].count = node.count - leftCount;
 	m_Nodes[rightChildIdx].aabb = combineAABBs(temp_aabb.begin() + m_Nodes[rightChildIdx].leftFirst, temp_aabb.begin() + m_Nodes[rightChildIdx].leftFirst + m_Nodes[rightChildIdx].count);
 
