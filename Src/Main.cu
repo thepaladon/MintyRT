@@ -23,45 +23,10 @@ constexpr int FB_INIT_HEIGHT= 800;
 
 #define MODEL_FP(model) (std::string("Resources/Models/") + model + "/" + model + ".gltf")
 
-__device__ struct Triangle
-{
-public:
-    glm::vec3 vertex0;
-    glm::vec3 vertex1;
-    glm::vec3 vertex2;
-};
 
-__device__ void intersect_tri(Ray& ray, const Triangle& tris)
-{
-    const glm::vec3 edge1 = tris.vertex1 - tris.vertex0;
-    const glm::vec3 edge2 = tris.vertex2 - tris.vertex0;
-    const glm::vec3 h = cross(ray.dir, edge2);
-    const float a = dot(edge1, h);
-    if (fabs(a) < .0001f) return; // ray parallel to triangle
-    const float f = 1 / a;
-    const glm::vec3 s = ray.org - tris.vertex0;
-    const float u = f * dot(s, h);
-    if (u < 0 || u > 1) return;
-    const glm::vec3 q = cross(s, edge1);
-    const float v = f * dot(ray.dir, q);
-    if (v < 0 || u + v > 1) return;
-    const float t = f * dot(edge2, q);
-    if (t > 0.0001f) { // T Has to be positive
-        if (ray.t > t)
-        {
-            ray.t = t;
-            ray.hit = true;
-            //ray->intersection.tri_hit = triIdx;
-            //ray->intersection.u = u;
-            //ray->intersection.v = v;
-            ray.normal = cross(edge1, edge2);
-        }
-    }
-}
+__device__ glm::vec3 color(Ray& r, BLAS blas, GPUTriData model) {
 
-__device__ glm::vec3 color(Ray& r, const float* vertex, const unsigned* idx, unsigned long long  num_tris, BLAS blas) {
-
-    blas.IntersectBVH(r, 0);
+    blas.IntersectBVH(r, 0, model);
 
     /*for (int i = 0; i < num_tris; i++)
     {
@@ -100,7 +65,7 @@ __device__ glm::vec3 color(Ray& r, const float* vertex, const unsigned* idx, uns
     return (1.0f - t) * glm::vec3(1.0f, 1.0f, 1.0f) + t * glm::vec3(0.5f, 0.7f, 1.0f);
 }
 
-__global__ void render(uchar3* fb, int max_x, int max_y, Camera cam, const float* vertex, const unsigned* idx, unsigned long long num_tris, BLAS blas) {
+__global__ void render(uchar3* fb, int max_x, int max_y, Camera cam, BLAS blas, GPUTriData model) {
 
     const int i = threadIdx.x + blockIdx.x * blockDim.x;
     const int j = threadIdx.y + blockIdx.y * blockDim.y;
@@ -108,7 +73,7 @@ __global__ void render(uchar3* fb, int max_x, int max_y, Camera cam, const float
 
     int pixel_index = j * max_x + i;
  	Ray r = cam.generate((float)max_x, (float)max_y, (float)i, (float)j);
-    fb[pixel_index] = to_uchar3(color(r, vertex, idx, num_tris, blas));
+    fb[pixel_index] = to_uchar3(color(r, blas, model));
 }
 
 
@@ -154,11 +119,16 @@ int main()
     blasInput.index  = sahhhduh->GetBuffers()[3];
     blasInput.transform = glm::identity<glm::mat4>();
     std::vector<BLASInput> blastestis;
-    blastestis.push_back(blasInput);
+	blastestis.push_back(blasInput);
 
     BLAS blastest(blastestis);
 
-    //Make sure everything is available before start of Render
+	const GPUTriData model{
+        (const float*)sahhhduh->GetBuffers()[0]->GetBufferDataPtr(),
+        (const unsigned*)sahhhduh->GetBuffers()[3]->GetBufferDataPtr(),
+    };
+
+    // Make sure everything is available before start of Render
     checkCudaErrors(cudaGetLastError());
     checkCudaErrors(cudaDeviceSynchronize());
 
@@ -246,20 +216,17 @@ int main()
         constexpr int tx = 8;
         constexpr int ty = 8;
 
-
         // Render our buffer
         const dim3 blocks(alignedX / tx + 1, alignedY / ty + 1);
         const dim3 threads(tx, ty);
-        render <<< blocks, threads >>> (
-            gpu_fb, 
-            alignedX, 
-            alignedY, 
+        render << < blocks, threads >> > (
+            gpu_fb,
+            alignedX,
+            alignedY,
             cam,
-            (const float*)(vrtx_buffer),
-            (const unsigned*)(idx_buffer),
-            num_tris,
-            blastest
-            );
+            blastest,
+            model
+        );
 
         checkCudaErrors(cudaGetLastError());
         checkCudaErrors(cudaDeviceSynchronize());

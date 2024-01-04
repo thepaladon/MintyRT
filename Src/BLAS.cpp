@@ -10,7 +10,6 @@
 // Jacco Bikker
 // https://jacco.ompf2.com/2022/04/13/how-to-build-a-bvh-part-1-basics/
 
-
 AABB combineAABBs(std::vector<AABB>::const_iterator startIt, std::vector<AABB>::const_iterator endIt)
 {
 	AABB combined;
@@ -83,9 +82,17 @@ BLAS::BLAS(std::vector<BLASInput>& blas_build_data)
 		Subdivide(0, nodes, temp_aabb, tri_indices);
 	}
 
-	const size_t nodesSizeInBytes = sizeof(BLASNode) * m_NodesUsed;
-	checkCudaErrors(cudaMalloc(&m_GPUNodes, nodesSizeInBytes));
-	checkCudaErrors(cudaMemcpy(m_GPUNodes, nodes.data(), nodesSizeInBytes, cudaMemcpyHostToDevice));
+	{
+		const size_t nodesSizeInBytes = sizeof(BLASNode) * m_NodesUsed;
+		checkCudaErrors(cudaMalloc(&m_GPUNodes, nodesSizeInBytes));
+		checkCudaErrors(cudaMemcpy(m_GPUNodes, nodes.data(), nodesSizeInBytes, cudaMemcpyHostToDevice));
+	}
+
+	{
+		const size_t triIndicesArrSizeInBytes = sizeof(int) * tri_indices.size();
+		checkCudaErrors(cudaMalloc(&m_GPUSortedTriIndices, triIndicesArrSizeInBytes));
+		checkCudaErrors(cudaMemcpy(m_GPUSortedTriIndices, tri_indices.data(), triIndicesArrSizeInBytes, cudaMemcpyHostToDevice));
+	}
 
 }
 
@@ -119,7 +126,6 @@ void BLAS::PrecomputeAABB(std::vector<AABB>& temp_aabb, const std::vector<glm::v
 	}
 
 }
-
 
 void BLAS::Subdivide(glm::uint nodeIdx, std::vector<BLASNode>& out_nodes, 
 const std::vector<AABB>& in_temp_aabb, std::vector<int>& in_tri_indices)
