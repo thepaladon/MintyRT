@@ -35,12 +35,21 @@ AABB combineAABBs(std::vector<AABB>::const_iterator startIt, std::vector<AABB>::
 
 BLAS::BLAS(std::vector<BLASInput>& blas_build_data)
 {
+	// Works with only one BLAS for the time being
+	assert(blas_build_data.size() == 1);
+
 	for (auto& data : blas_build_data)
 	{
+		std::vector<glm::vec3> temp_cpu_vertices;
+		std::vector<glm::ivec3> temp_cpu_triangle_idx;
+		std::vector<AABB> temp_aabb;
+
+
 		// Check for expected formats
 		assert(data.vertex->GetStride() == sizeof(glm::vec3));
 		assert(data.index->GetStride() == sizeof(int));
 
+		
 		temp_cpu_vertices.resize(data.vertex->GetNumElements());
 		auto num_primitivess = data.index->GetNumElements() / 3;
 
@@ -60,17 +69,21 @@ BLAS::BLAS(std::vector<BLASInput>& blas_build_data)
 		PrecomputeAABB(temp_aabb, temp_cpu_vertices, temp_cpu_triangle_idx);
 
 		m_Nodes.resize(num_primitivess * 2 - 1);
-		m_RootNode = &m_Nodes.front();
+		auto& RootNode = m_Nodes.front();
 
 		// Add "Calculate Bounds Function"
-		m_RootNode->count = num_primitivess;
-		m_RootNode->leftFirst = 0;
-		m_RootNode->aabb = combineAABBs(temp_aabb.begin(), temp_aabb.end());
+		RootNode.count = num_primitivess;
+		RootNode.leftFirst = 0;
+		RootNode.aabb = combineAABBs(temp_aabb.begin(), temp_aabb.end());
 		m_NodesUsed += 2; // we use Node 0 & 1 for Root nodes.
 
 		// Subdivide
-		Subdivide(0);
+		Subdivide(0, temp_aabb);
 	}
+
+	const size_t nodesSizeInBytes = sizeof(BLASNode) * m_NodesUsed;
+	checkCudaErrors(cudaMalloc(&m_GPUNodes, nodesSizeInBytes));
+	checkCudaErrors(cudaMemcpy(m_GPUNodes, m_Nodes.data(), nodesSizeInBytes, cudaMemcpyHostToDevice));
 
 }
 
@@ -90,9 +103,9 @@ void BLAS::PrecomputeAABB(std::vector<AABB>& temp_aabb, const std::vector<glm::v
 		aabb.max = vec3(-1e30f);
 
 		Tri leafTri;
-		leafTri.vertex0 = temp_cpu_vertices[indices[i].x];
-		leafTri.vertex1 = temp_cpu_vertices[indices[i].y];
-		leafTri.vertex2 = temp_cpu_vertices[indices[i].z];
+		leafTri.vertex0 = vertices[indices[i].x];
+		leafTri.vertex1 = vertices[indices[i].y];
+		leafTri.vertex2 = vertices[indices[i].z];
 
 		aabb.min = min(aabb.min, leafTri.vertex0);
 		aabb.min = min(aabb.min, leafTri.vertex1);
@@ -105,35 +118,8 @@ void BLAS::PrecomputeAABB(std::vector<AABB>& temp_aabb, const std::vector<glm::v
 
 }
 
-bool IntersectAABB(const Ray& ray, const glm::vec3 bmin, const glm::vec3 bmax)
-{
-	float tx1 = (bmin.x - ray.org.x) / ray.dir.x, tx2 = (bmax.x - ray.org.x) / ray.dir.x;
-	float tmin = glm::min(tx1, tx2), tmax = glm::max(tx1, tx2);
-	float ty1 = (bmin.y - ray.org.y) / ray.dir.y, ty2 = (bmax.y - ray.org.y) / ray.dir.y;
-	tmin = glm::max(tmin, glm::min(ty1, ty2)), tmax = glm::min(tmax, glm::max(ty1, ty2));
-	float tz1 = (bmin.z - ray.org.z) / ray.dir.z, tz2 = (bmax.z - ray.org.z) / ray.dir.z;
-	tmin = glm::max(tmin, glm::min(tz1, tz2)), tmax = glm::min(tmax, glm::max(tz1, tz2));
-	return tmax >= tmin && tmin < ray.t && tmax > 0;
-}
 
-void BLAS::IntersectBVH(Ray& ray, const glm::uint nodeIdx)
-{
-	BLASNode& node = m_Nodes[nodeIdx];
-	if (!IntersectAABB(ray, node.aabb.min, node.aabb.max)) return;
-
-	if (node.isLeaf())
-	{
-		for (glm::uint i = 0; i < node.count; i++) {}
-			// nada yet //IntersectTri(ray, tri[triIdx[node.firstTriIdx + i]]);
-	}
-	else
-	{
-		IntersectBVH(ray, node.leftFirst);
-		IntersectBVH(ray, node.leftFirst + 1);
-	}
-}
-
-void BLAS::Subdivide(glm::uint nodeIdx)
+void BLAS::Subdivide(glm::uint nodeIdx, const std::vector<AABB>& temp_aabb)
 {
 	// Terminate recursion
 	BLASNode& node = m_Nodes[nodeIdx];
@@ -177,6 +163,6 @@ void BLAS::Subdivide(glm::uint nodeIdx)
 	node.count = 0;					// Set to zero to indicate it points to a child node
 
 	// recurse
-	Subdivide(leftChildIdx);
-	Subdivide(rightChildIdx);
+	Subdivide(leftChildIdx, temp_aabb);
+	Subdivide(rightChildIdx, temp_aabb);
 }

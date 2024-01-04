@@ -1,6 +1,7 @@
 ﻿// GLM Defines
 #define CUDA_VERSION 12020
 #define GLM_FORCE_CUDA
+#define CUDA_LAUNCH_BLOCKING = 1
 
 #include <chrono>
 #include <cstdlib>
@@ -58,9 +59,11 @@ __device__ void intersect_tri(Ray& ray, const Triangle& tris)
     }
 }
 
-__device__ glm::vec3 color(Ray& r, const float* vertex, const unsigned* idx, unsigned long long  num_tris) {
+__device__ glm::vec3 color(Ray& r, const float* vertex, const unsigned* idx, unsigned long long  num_tris, BLAS blas) {
 
-    for (int i = 0; i < num_tris; i++)
+    blas.IntersectBVH(r, 0);
+
+    /*for (int i = 0; i < num_tris; i++)
     {
         const auto& i0 = idx[i * 3 + 0];
         const auto& i1 = idx[i * 3 + 1];
@@ -84,8 +87,8 @@ __device__ glm::vec3 color(Ray& r, const float* vertex, const unsigned* idx, uns
         
         Triangle tri{ v0, v1, v2 };
 
-        intersect_tri(r, tri);
-    }
+        //intersect_tri(r, tri);
+    }*/
 
     if(r.hit == true)
     {
@@ -97,7 +100,7 @@ __device__ glm::vec3 color(Ray& r, const float* vertex, const unsigned* idx, uns
     return (1.0f - t) * glm::vec3(1.0f, 1.0f, 1.0f) + t * glm::vec3(0.5f, 0.7f, 1.0f);
 }
 
-__global__ void render(uchar3* fb, int max_x, int max_y, Camera cam, const float* vertex, const unsigned* idx, unsigned long long num_tris) {
+__global__ void render(uchar3* fb, int max_x, int max_y, Camera cam, const float* vertex, const unsigned* idx, unsigned long long num_tris, BLAS blas) {
 
     const int i = threadIdx.x + blockIdx.x * blockDim.x;
     const int j = threadIdx.y + blockIdx.y * blockDim.y;
@@ -105,7 +108,7 @@ __global__ void render(uchar3* fb, int max_x, int max_y, Camera cam, const float
 
     int pixel_index = j * max_x + i;
  	Ray r = cam.generate((float)max_x, (float)max_y, (float)i, (float)j);
-    fb[pixel_index] = to_uchar3(color(r, vertex, idx, num_tris));
+    fb[pixel_index] = to_uchar3(color(r, vertex, idx, num_tris, blas));
 }
 
 
@@ -141,39 +144,7 @@ int main()
     bool running = true;
 
 	Camera cam(glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, glm::radians(-224.f), 0.0f), 75.f, float(alignedX) / float(alignedY));
-
-    glm::vec3 v0 = glm::vec3(1.0f, 1.0f, 1.0f);
-    glm::vec3 v1 = glm::vec3(1.0f, 0.0f, 1.0f);
-    glm::vec3 v2 = glm::vec3(0.0f, 1.0f, 1.0f);
-    glm::vec3 v3 = glm::vec3(0.0f, 0.0f, 1.0f);
     
-    bml::Buffer* vert_buff = nullptr;
-    bml::Buffer* idx_buff = nullptr;
-    {
-
-        glm::vec3 vert[4] = 
-            { v0, v1, v2, v3 };
-
-        /*
-        glm::vec3 quad[4] = {
-            { v3, v1, v2 },
-            { v0, v1, v2 } };
-        */
-
-        int idx[6] = { 3, 1, 2, 2, 1, 0};
-
-        vert_buff = new bml::Buffer(vert, sizeof(glm::vec3), 4, "Vertex Buffer");
-        idx_buff = new bml::Buffer(idx, sizeof(int), 6, "Idx Buffer");
-    }
-
-    //Make sure everything is available before start of Render
-    checkCudaErrors(cudaGetLastError());
-    checkCudaErrors(cudaDeviceSynchronize());
-
-    // const void* vrtx_buffer = vert_buff->GetBufferDataPtr();
-    // const void* idx_buffer = idx_buff->GetBufferDataPtr();
-    // const unsigned long long num_tris = 2;
-
  	const void* vrtx_buffer = sahhhduh->GetBuffers()[0]->GetBufferDataPtr();
  	const void* idx_buffer = sahhhduh->GetBuffers()[3]->GetBufferDataPtr();
     const unsigned long long num_tris = sahhhduh->GetBuffers()[0]->GetNumElements() / 3;
@@ -186,6 +157,10 @@ int main()
     blastestis.push_back(blasInput);
 
     BLAS blastest(blastestis);
+
+    //Make sure everything is available before start of Render
+    checkCudaErrors(cudaGetLastError());
+    checkCudaErrors(cudaDeviceSynchronize());
 
     while (running)
     {
@@ -282,10 +257,9 @@ int main()
             cam,
             (const float*)(vrtx_buffer),
             (const unsigned*)(idx_buffer),
-            num_tris
+            num_tris,
+            blastest
             );
-
-
 
         checkCudaErrors(cudaGetLastError());
         checkCudaErrors(cudaDeviceSynchronize());
