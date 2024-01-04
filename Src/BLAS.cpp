@@ -38,12 +38,14 @@ BLAS::BLAS(std::vector<BLASInput>& blas_build_data)
 	// Works with only one BLAS for the time being
 	assert(blas_build_data.size() == 1);
 
+	std::vector<glm::vec3> temp_cpu_vertices;
+	std::vector<glm::ivec3> temp_cpu_triangle_idx;
+	std::vector<AABB> temp_aabb;
+	std::vector<int> tri_indices;
+	std::vector<BLASNode> nodes;
+
 	for (auto& data : blas_build_data)
 	{
-		std::vector<glm::vec3> temp_cpu_vertices;
-		std::vector<glm::ivec3> temp_cpu_triangle_idx;
-		std::vector<AABB> temp_aabb;
-
 
 		// Check for expected formats
 		assert(data.vertex->GetStride() == sizeof(glm::vec3));
@@ -61,15 +63,15 @@ BLAS::BLAS(std::vector<BLASInput>& blas_build_data)
 		checkCudaErrors(cudaMemcpy(temp_cpu_triangle_idx.data(), data.index->GetBufferDataPtr(), data.index->GetSizeBytes(), cudaMemcpyDeviceToHost));
 
 		// Represents the temp_cpu_triangle_idx as we sort it
-		m_TriIndices.resize(num_primitivess);
-		for (int i = 0; i < m_TriIndices.size(); i++) m_TriIndices[i] = i;
+		tri_indices.resize(num_primitivess);
+		for (int i = 0; i < tri_indices.size(); i++) tri_indices[i] = i;
 
 		// Precompute all AABBs for an index + vertex pair
 		temp_aabb.resize(num_primitivess);
 		PrecomputeAABB(temp_aabb, temp_cpu_vertices, temp_cpu_triangle_idx);
 
-		m_Nodes.resize(num_primitivess * 2 - 1);
-		auto& RootNode = m_Nodes.front();
+		nodes.resize(num_primitivess * 2 - 1);
+		auto& RootNode = nodes.front();
 
 		// Add "Calculate Bounds Function"
 		RootNode.count = num_primitivess;
@@ -78,12 +80,12 @@ BLAS::BLAS(std::vector<BLASInput>& blas_build_data)
 		m_NodesUsed += 2; // we use Node 0 & 1 for Root nodes.
 
 		// Subdivide
-		Subdivide(0, temp_aabb);
+		Subdivide(0, nodes, temp_aabb, tri_indices);
 	}
 
 	const size_t nodesSizeInBytes = sizeof(BLASNode) * m_NodesUsed;
 	checkCudaErrors(cudaMalloc(&m_GPUNodes, nodesSizeInBytes));
-	checkCudaErrors(cudaMemcpy(m_GPUNodes, m_Nodes.data(), nodesSizeInBytes, cudaMemcpyHostToDevice));
+	checkCudaErrors(cudaMemcpy(m_GPUNodes, nodes.data(), nodesSizeInBytes, cudaMemcpyHostToDevice));
 
 }
 
@@ -119,10 +121,11 @@ void BLAS::PrecomputeAABB(std::vector<AABB>& temp_aabb, const std::vector<glm::v
 }
 
 
-void BLAS::Subdivide(glm::uint nodeIdx, const std::vector<AABB>& temp_aabb)
+void BLAS::Subdivide(glm::uint nodeIdx, std::vector<BLASNode>& out_nodes, 
+const std::vector<AABB>& in_temp_aabb, std::vector<int>& in_tri_indices)
 {
 	// Terminate recursion
-	BLASNode& node = m_Nodes[nodeIdx];
+	BLASNode& node = out_nodes[nodeIdx];
 	if (node.count <= 2) return;
 
 	// determine split axis and position
@@ -137,10 +140,10 @@ void BLAS::Subdivide(glm::uint nodeIdx, const std::vector<AABB>& temp_aabb)
 	int end = start + node.count - 1;
 	while (start <= end)
 	{
-		if (temp_aabb[m_TriIndices[start]].centroid()[axis] < splitPos)
+		if (in_temp_aabb[in_tri_indices[start]].centroid()[axis] < splitPos)
 			start++;
 		else
-			std::swap(m_TriIndices[start], m_TriIndices[end--]);
+			std::swap(in_tri_indices[start], in_tri_indices[end--]);
 	}
 
 	// abort split if one of the sides is empty
@@ -151,18 +154,18 @@ void BLAS::Subdivide(glm::uint nodeIdx, const std::vector<AABB>& temp_aabb)
 	const int leftChildIdx = m_NodesUsed++;
 	const int rightChildIdx = m_NodesUsed++;
 
-	m_Nodes[leftChildIdx].leftFirst = node.leftFirst;
-	m_Nodes[leftChildIdx].count = leftCount;
-	m_Nodes[leftChildIdx].aabb = combineAABBs(temp_aabb.begin() + node.leftFirst, temp_aabb.begin() + node.leftFirst + leftCount);
+	out_nodes[leftChildIdx].leftFirst = node.leftFirst;
+	out_nodes[leftChildIdx].count = leftCount;
+	out_nodes[leftChildIdx].aabb = combineAABBs(in_temp_aabb.begin() + node.leftFirst, in_temp_aabb.begin() + node.leftFirst + leftCount);
 
-	m_Nodes[rightChildIdx].leftFirst = start;
-	m_Nodes[rightChildIdx].count = node.count - leftCount;
-	m_Nodes[rightChildIdx].aabb = combineAABBs(temp_aabb.begin() + m_Nodes[rightChildIdx].leftFirst, temp_aabb.begin() + m_Nodes[rightChildIdx].leftFirst + m_Nodes[rightChildIdx].count);
+	out_nodes[rightChildIdx].leftFirst = start;
+	out_nodes[rightChildIdx].count = node.count - leftCount;
+	out_nodes[rightChildIdx].aabb = combineAABBs(in_temp_aabb.begin() + out_nodes[rightChildIdx].leftFirst, in_temp_aabb.begin() + out_nodes[rightChildIdx].leftFirst + out_nodes[rightChildIdx].count);
 
 	node.leftFirst = leftChildIdx;	// Points to the pair of nodes connected to it left & right (left + 1) 
 	node.count = 0;					// Set to zero to indicate it points to a child node
 
 	// recurse
-	Subdivide(leftChildIdx, temp_aabb);
-	Subdivide(rightChildIdx, temp_aabb);
+	Subdivide(leftChildIdx, out_nodes, in_temp_aabb, in_tri_indices);
+	Subdivide(rightChildIdx, out_nodes, in_temp_aabb, in_tri_indices);
 }

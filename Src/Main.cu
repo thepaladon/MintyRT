@@ -92,7 +92,7 @@ __device__ glm::vec3 color(Ray& r, const float* vertex, const unsigned* idx, uns
 
     if(r.hit == true)
     {
-        return { r.normal * glm::vec3(0.5) + 0.5f } ;
+        return { r.normal /** glm::vec3(0.5) + 0.5f*/ } ;
     }
 
     const glm::vec3 unit_direction = normalize(r.dir);

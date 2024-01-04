@@ -2,7 +2,7 @@
 
 #pragma once
 
-#include <crt/host_defines.h>
+#include <cuda_runtime_api.h>
 #include <glm/glm.hpp>
 
 class Ray

@@ -38,15 +38,12 @@ public:
 
 private:
 
-	__host__ void Subdivide(glm::uint nodeIdx, const std::vector<AABB>& temp_aabb);
+	__host__ void Subdivide(glm::uint nodeIdx, std::vector<BLASNode>& out_nodes, const std::vector<AABB>& in_temp_aabb, std::vector<int>&
+	                        in_tri_indices);
 	__host__ void PrecomputeAABB(std::vector<AABB>& temp_aabb, const std::vector<glm::vec3>& vertices, const  std::vector<glm::ivec3>& indices);
 
 	int m_NodesUsed = 0;
 	BLASNode* m_GPUNodes;
-	std::vector<BLASNode> m_Nodes;
-
-	//Temporal CPU Data
-	std::vector<int> m_TriIndices;
 
 public:
 	__device__ bool IntersectAABB(const Ray& ray, const glm::vec3 bmin, const glm::vec3 bmax)
@@ -63,20 +60,23 @@ public:
 	__device__ void IntersectBVH(Ray& ray, glm::uint nodeIdx)
 	{
 		const auto node = &m_GPUNodes[nodeIdx];
-		printf("Checking Node read data: %i \n", node->leftFirst);
+		//printf("Checking Node read data: %i \n", node->leftFirst);
 
 		if (!IntersectAABB(ray, node->aabb.min, node->aabb.max)) return;
+		ray.normal.x += 0.1f;
 
 		if (node->isLeaf())
 		{
-			printf("Intersecting primitive of: %i \n", nodeIdx);
+			//printf("Intersecting primitive of: %i \n", nodeIdx);
 			ray.hit = true;
+			ray.normal.y = 1;
+
 			// for (glm::uint i = 0; i < node->count; i++) {}
 			// nada yet //IntersectTri(ray, tri[triIdx[node.firstTriIdx + i]]);
 		}
 		else
 		{
-			printf("Intersecting BVH children of: %i \n", nodeIdx);
+			//printf("Intersecting BVH children of: %i \n", nodeIdx);
 			IntersectBVH(ray, node->leftFirst);
 			IntersectBVH(ray, node->leftFirst + 1);
 		}
