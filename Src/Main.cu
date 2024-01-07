@@ -3,7 +3,6 @@
 #define GLM_FORCE_CUDA
 #define CUDA_LAUNCH_BLOCKING = 1
 
-
 #include <chrono>
 #include <cstdlib>
 #include <thread>
@@ -110,6 +109,17 @@ void CPURender(uchar3* fb, glm::ivec2 min, glm::ivec2 max, glm::ivec2 total, Cam
     }
 }
 
+void CPURenderOpenMP(uchar3* fb,  glm::ivec2 total, Camera cam, BLAS blas, GPUTriData model)
+{
+	for (int i = 0; i <= total.x * total.y ;i++) 
+    {
+        const int u = i % total.x;
+        const int v = i / total.x;
+        Ray r = cam.generate((float)total.x, (float)total.y, (float)u, (float)v);
+        fb[i] = to_uchar3(color(r, blas, model));
+    }
+}
+
 
 int main()
 {
@@ -120,6 +130,7 @@ int main()
 
     uint32_t alignedX = m_Window->GetAlignedWidth();
     uint32_t alignedY = m_Window->GetAlignedHeight();
+    std::vector<Square> screenSquares = divideScreenIntoSquares(alignedX, alignedY, 150);
 
 	// Initial Allocate Frame Buffer
 	{
@@ -234,6 +245,7 @@ int main()
 
             alignedX = m_Window->GetAlignedWidth();
             alignedY = m_Window->GetAlignedHeight();
+            screenSquares = divideScreenIntoSquares(alignedX, alignedY, 150);
 
         	checkCudaErrors(cudaFree(gpu_fb));
             delete cpu_fb;
@@ -271,39 +283,38 @@ int main()
         cudaMemcpy(cpu_fb, gpu_fb, alignedX * alignedY * sizeof(uchar3), cudaMemcpyDeviceToHost);
         
 #else
-
-        // Worst multithreading on the planet,
-        // but aye it works
-        std::vector<Square> groups = divideScreenIntoSquares(alignedX, alignedY, 150);
-        std::vector<std::thread> threads;
-
         glm::ivec2 total = { alignedX, alignedY };
 
-        for (const auto& group : groups) {
-            glm::ivec2 min = { group.minX, group.minY };
-            glm::ivec2 max = { group.maxX, group.maxY };
+        constexpr bool shittyMultithreading = false;
+        if (shittyMultithreading) {
+            // Worst multithreading on the planet,
+            // but aye it works
+            std::vector<std::thread> threads;
 
-            threads.emplace_back(CPURender, cpu_fb,
-                min, 
-                max, 
+            for (const auto& group : screenSquares) {
+                glm::ivec2 min = { group.minX, group.minY };
+                glm::ivec2 max = { group.maxX, group.maxY };
+
+                threads.emplace_back(CPURender, cpu_fb,
+                    min,
+                    max,
+                    total,
+                    cam,
+                    blastest,
+                    model_data);
+            }
+
+            for (auto& thread : threads) {
+                thread.join();
+            }
+        }
+        else {
+            CPURenderOpenMP(cpu_fb,
                 total,
                 cam,
                 blastest,
                 model_data);
         }
-
-        for (auto& thread : threads) {
-            thread.join();
-        }
-
-
-        /*CPURender(cpu_fb,
-            alignedX,
-            alignedY,
-            cam,
-            blastest,
-            model_data);*/
-
 #endif
 
         m_Window->RenderFb(cpu_fb);
