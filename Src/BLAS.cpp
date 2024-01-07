@@ -46,12 +46,10 @@ BLAS::BLAS(std::vector<BLASInput>& blas_build_data)
 
 	for (auto& data : blas_build_data)
 	{
-
 		// Check for expected formats
 		assert(data.vertex->GetStride() == sizeof(glm::vec3));
 		assert(data.index->GetStride() == sizeof(int));
 
-		
 		temp_cpu_vertices.resize(data.vertex->GetNumElements());
 		auto num_primitivess = data.index->GetNumElements() / 3;
 
@@ -60,7 +58,6 @@ BLAS::BLAS(std::vector<BLASInput>& blas_build_data)
 		// Copy Data from GPU to CPU
 		checkCudaErrors(cudaMemcpy(temp_cpu_vertices.data(), data.vertex->GetBufferDataPtr(), data.vertex->GetSizeBytes(),	 acr::cudaMemcpySpecifiedTiHost));
 		checkCudaErrors(cudaMemcpy(temp_cpu_triangle_idx.data(), data.index->GetBufferDataPtr(), data.index->GetSizeBytes(), acr::cudaMemcpySpecifiedTiHost));
-
 
 		// Represents the temp_cpu_triangle_idx as we sort it
 		tri_indices.resize(num_primitivess);
@@ -74,7 +71,7 @@ BLAS::BLAS(std::vector<BLASInput>& blas_build_data)
 		auto& RootNode = nodes.front();
 
 		// Add "Calculate Bounds Function"
-		RootNode.count = num_primitivess;
+		RootNode.count = static_cast<int>(num_primitivess);
 		RootNode.leftFirst = 0;
 		RootNode.aabb = combineAABBs(temp_aabb.begin(), temp_aabb.end());
 		m_NodesUsed += 2; // we use Node 0 & 1 for Root nodes.

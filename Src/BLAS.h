@@ -80,13 +80,15 @@ public:
 			//printf("[1] Index Test %p, %i \n", model.index_buffer, model.index_buffer[0]);
 			//printf("[1] Vertex Test %p, %f \n", model.vertex_buffer, model.vertex_buffer[0]);
 
-			for (glm::uint i = node.leftFirst; i < node.leftFirst + node.count; i++)
+			for (int i = node.leftFirst; i < node.leftFirst + node.count; i++)
 			//for (int i = 0; i < 11; i++)
 			{
+				// huh how does this work without this?
+				// auto prim = m_GPUSortedTriIndices[i];
 
 				const auto i0 = model.index_buffer[i * 3 + 0];
 				const auto i1 = model.index_buffer[i * 3 + 1];
-				const auto i2 = model.index_buffer [i * 3 + 2];
+				const auto i2 = model.index_buffer[i * 3 + 2];
 
 				const auto v0x = model.vertex_buffer [i0 * 3 + 0];
 				const auto v0y = model.vertex_buffer[i0 * 3 + 1];

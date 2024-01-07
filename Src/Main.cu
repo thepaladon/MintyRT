@@ -40,8 +40,6 @@ std::vector<Square> divideScreenIntoSquares(int screenWidth, int screenHeight, i
     return squares;
 }
 
-
-
 __host__ __device__ glm::vec3 color(Ray& r, BLAS blas, GPUTriData model) {
 
 	blas.IntersectBVH(r, 0, model);
@@ -76,7 +74,7 @@ __host__ __device__ glm::vec3 color(Ray& r, BLAS blas, GPUTriData model) {
 
     if(r.hit == true)
     {
-        return { r.normal /** glm::vec3(0.5) + 0.5f*/ } ;
+        return { r.normal * glm::vec3(0.5) + 0.5f } ;
     }
 
     const glm::vec3 unit_direction = normalize(r.dir);
@@ -140,10 +138,12 @@ int main()
         cpu_fb = new uchar3[num_pixels];
     }
 
-	//const auto model = new bml::Model(MODEL_FP("CesiumMilkTruck"));
-	const auto model = new bml::Model(MODEL_FP("Cube"));
+    // MAKE SURE TO CHANGE 'index' and 'vertex' to the same 
+    // as the ones specified in the glTF spec below!!!!!!!!!!!!
+	// const auto model = new bml::Model(MODEL_FP("CesiumMilkTruck"));
+	// const auto model = new bml::Model(MODEL_FP("Cube"));
 	// const auto model = new bml::Model(MODEL_FP("DamagedHelmet"));
-	// const auto model = new bml::Model(MODEL_FP("sah_test"));
+	const auto model = new bml::Model(MODEL_FP("sah_test"));
 	// const auto model = new bml::Model(MODEL_FP("SciFiHelmet"));
 
     // Start the timer
@@ -154,10 +154,10 @@ int main()
     // Output FB
     bool running = true;
 
-	Camera cam(glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, glm::radians(-224.f), 0.0f), 75.f, float(alignedX) / float(alignedY));
+	Camera cam(glm::vec3(0.0f, 0.0f, -15.0f), glm::vec3(0.0f, glm::radians(-224.f), 0.0f), 75.f, float(alignedX) / float(alignedY));
 
-    auto vertex = model->GetBuffers()[1];
-    auto index = model->GetBuffers()[0];
+    auto vertex = model->GetBuffers()[0];
+    auto index = model->GetBuffers()[3];
 
     BLASInput blasInput;
     blasInput.vertex = vertex;
@@ -187,59 +187,14 @@ int main()
         float delta_time_ms = delta_time_s.count() * 1000;
     	start_time = std::chrono::high_resolution_clock::now();
 
-        // Replace with mouse controls once that is implemented in a good way.
-        float hor_inp = 0;
-        float ver_inp = 0;
-        if (m_Window->GetKey(VK_LEFT)) { hor_inp = -1.0; }
-        if (m_Window->GetKey(VK_RIGHT)) { hor_inp = 1.0; }
-        if (m_Window->GetKey(VK_UP)) { ver_inp = -1.0;   }
-        if (m_Window->GetKey(VK_DOWN)) { ver_inp = 1.0;  }
-
-        const float m_dtx = hor_inp ; // m_Window->GetMouseDeltaX();
-        const float m_dty = ver_inp ; // m_Window->GetMouseDeltaY();
-
+        //Camera
         cam.dt = delta_time_ms;
-        if (m_Window->GetKey('W'))
-        {
-            cam.MoveFwd(1.0f);
-        }
-
-        if (m_Window->GetKey('S'))
-        {
-            cam.MoveFwd(-1.0f);
-        }
-
-        if (m_Window->GetKey('D'))
-        {
-            cam.MoveRight(1.0f);
-        }
-
-        if (m_Window->GetKey('A'))
-        {
-            cam.MoveRight(-1.0f);
-        }
-
-        if (m_Window->GetKey('R'))
-        {
-            cam.MoveUp(1.0f);
-        }
-
-    	if (m_Window->GetKey('F'))
-        {
-            cam.MoveUp(-1.0f);
-        }
-
-        cam.SetPitch(m_dty);
-        cam.SetYaw(m_dtx);
+        CameraInput(cam, m_Window);
     	cam.UpdateCamera();
 
-        //printf(" %f          %f \n", m_dtx, m_dty );
-        //printf("Pos - X: %f, Y: %f, Z : %f \n", cam.m_Pos.x, cam.m_Pos.y, cam.m_Pos.z );
-        //auto rad = glm::degrees(cam.m_PitchYawRoll);
-    	//printf("Pitch: %f, Yaw: %f, Roll: %f \n \n", rad.x, rad.y, rad.z );
 
+        // Update & Resize
         running = m_Window->OnUpdate(delta_time_ms);
-
         if (m_Window->GetIsResized()) {
             m_Window->CreateSampleDIB();
 
@@ -258,6 +213,7 @@ int main()
             printf("Resized : %i : %i \n", alignedX, alignedY);
         }
 
+        // Render
 #ifdef USE_GPU
         // Thread Groups
         constexpr int tx = 8;
@@ -317,6 +273,7 @@ int main()
         }
 #endif
 
+        // Copy to FB (End Frame)
         m_Window->RenderFb(cpu_fb);
     }
 
