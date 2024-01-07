@@ -26,25 +26,27 @@ constexpr int FB_INIT_HEIGHT= 800;
 
 __device__ glm::vec3 color(Ray& r, BLAS blas, GPUTriData model) {
 
-    blas.IntersectBVH(r, 0, model);
+	blas.IntersectBVH(r, 0, model);
 
-    /*for (int i = 0; i < num_tris; i++)
+    printf("[2] Index Test %p, %i \n", model.index_buffer, model.index_buffer[0]);
+    printf("[2] Vertex Test %p, %f \n", model.vertex_buffer, model.vertex_buffer[0]);
+
+
+    /*for (int i = 0; i < 12; i++)
     {
-        const auto& i0 = idx[i * 3 + 0];
-        const auto& i1 = idx[i * 3 + 1];
-        const auto& i2 = idx[i * 3 + 2];
+        const auto& i0 = model.index_buffer[i * 3 + 0];
+        const auto& i1 = model.index_buffer[i * 3 + 1];
+        const auto& i2 = model.index_buffer[i * 3 + 2];
         
-        const auto& v0x = vertex[i0 * 3 + 0];
-        const auto& v0y = vertex[i0 * 3 + 1];
-        const auto& v0z = vertex[i0 * 3 + 2];
-
-    	const auto& v1x = vertex[i1 * 3 + 0];
-        const auto& v1y = vertex[i1 * 3 + 1];
-        const auto& v1z = vertex[i1 * 3 + 2];
-
-        const auto& v2x = vertex[i2 * 3 + 0];
-        const auto& v2y = vertex[i2 * 3 + 1];
-        const auto& v2z = vertex[i2 * 3 + 2];
+        const auto& v0x = model.vertex_buffer[i0 * 3 + 0];
+        const auto& v0y = model.vertex_buffer[i0 * 3 + 1];
+        const auto& v0z = model.vertex_buffer[i0 * 3 + 2];
+    	const auto& v1x = model.vertex_buffer[i1 * 3 + 0];
+        const auto& v1y = model.vertex_buffer[i1 * 3 + 1];
+        const auto& v1z = model.vertex_buffer[i1 * 3 + 2];
+        const auto& v2x = model.vertex_buffer[i2 * 3 + 0];
+        const auto& v2y = model.vertex_buffer[i2 * 3 + 1];
+        const auto& v2z = model.vertex_buffer[i2 * 3 + 2];
 
         const glm::vec3& v0 = glm::vec3(v0x, v0y, v0z);
         const glm::vec3& v1 = glm::vec3(v1x, v1y, v1z);
@@ -52,7 +54,7 @@ __device__ glm::vec3 color(Ray& r, BLAS blas, GPUTriData model) {
         
         Triangle tri{ v0, v1, v2 };
 
-        //intersect_tri(r, tri);
+        intersect_tri(r, tri);
     }*/
 
     if(r.hit == true)
@@ -95,10 +97,11 @@ int main()
         cpu_fb = new uchar3[num_pixels];
     }
 
-	// const auto truck = new bml::Model(MODEL_FP("CesiumMilkTruck"));
-	// const auto dmged_helm = new bml::Model(MODEL_FP("DamagedHelmet"));
-	const auto sahhhduh = new bml::Model(MODEL_FP("sah_test"));
-	// const auto scifi_helm = new bml::Model(MODEL_FP("SciFiHelmet"));
+	//const auto model = new bml::Model(MODEL_FP("CesiumMilkTruck"));
+	const auto model = new bml::Model(MODEL_FP("Cube"));
+	// const auto model = new bml::Model(MODEL_FP("DamagedHelmet"));
+	// const auto model = new bml::Model(MODEL_FP("sah_test"));
+	// const auto model = new bml::Model(MODEL_FP("SciFiHelmet"));
 
     // Start the timer
     auto start_time = std::chrono::high_resolution_clock::now();
@@ -109,23 +112,22 @@ int main()
     bool running = true;
 
 	Camera cam(glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, glm::radians(-224.f), 0.0f), 75.f, float(alignedX) / float(alignedY));
-    
- 	const void* vrtx_buffer = sahhhduh->GetBuffers()[0]->GetBufferDataPtr();
- 	const void* idx_buffer = sahhhduh->GetBuffers()[3]->GetBufferDataPtr();
-    const unsigned long long num_tris = sahhhduh->GetBuffers()[0]->GetNumElements() / 3;
+
+    auto vertex = model->GetBuffers()[1];
+    auto index = model->GetBuffers()[0];
 
     BLASInput blasInput;
-    blasInput.vertex = sahhhduh->GetBuffers()[0];
-    blasInput.index  = sahhhduh->GetBuffers()[3];
+    blasInput.vertex = vertex;
+    blasInput.index = index;
     blasInput.transform = glm::identity<glm::mat4>();
     std::vector<BLASInput> blastestis;
 	blastestis.push_back(blasInput);
 
     BLAS blastest(blastestis);
 
-	const GPUTriData model{
-        (const float*)sahhhduh->GetBuffers()[0]->GetBufferDataPtr(),
-        (const unsigned*)sahhhduh->GetBuffers()[3]->GetBufferDataPtr(),
+	const GPUTriData model_data {
+        (const float*)vertex->GetBufferDataPtr(),
+        (const unsigned*)index->GetBufferDataPtr(),
     };
 
     // Make sure everything is available before start of Render
@@ -225,7 +227,7 @@ int main()
             alignedY,
             cam,
             blastest,
-            model
+            model_data
         );
 
         checkCudaErrors(cudaGetLastError());

@@ -54,12 +54,12 @@ BLAS::BLAS(std::vector<BLASInput>& blas_build_data)
 		temp_cpu_vertices.resize(data.vertex->GetNumElements());
 		auto num_primitivess = data.index->GetNumElements() / 3;
 
-		// We'll sort this CPU vector as we build the BVH
 		temp_cpu_triangle_idx.resize(num_primitivess);
 
 		// Copy Data from GPU to CPU
 		checkCudaErrors(cudaMemcpy(temp_cpu_vertices.data(), data.vertex->GetBufferDataPtr(), data.vertex->GetSizeBytes(), cudaMemcpyDeviceToHost));
 		checkCudaErrors(cudaMemcpy(temp_cpu_triangle_idx.data(), data.index->GetBufferDataPtr(), data.index->GetSizeBytes(), cudaMemcpyDeviceToHost));
+
 
 		// Represents the temp_cpu_triangle_idx as we sort it
 		tri_indices.resize(num_primitivess);
