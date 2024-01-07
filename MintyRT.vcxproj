@@ -391,6 +391,7 @@
     <ClInclude Include="External\glm\vec3.hpp" />
     <ClInclude Include="External\glm\vec4.hpp" />
     <ClInclude Include="External\glm\vector_relational.hpp" />
+    <ClInclude Include="Src\CudaPicker.h" />
     <ClInclude Include="Src\CudaUtils.cuh" />
     <ClInclude Include="Src\ModelLoading\Buffer.h" />
     <ClInclude Include="Src\ModelLoading\GpuModelStruct.h" />

@@ -1,5 +1,7 @@
 #pragma once
 
+// Undef if you want to use CPU
+//#define USE_GPU
 
 #include <cuda_runtime.h>
 
@@ -19,7 +21,7 @@ struct Triangle
     glm::vec3 vertex2;
 };
 
-__device__ inline void intersect_tri(Ray& ray, const Triangle& tris)
+__host__ __device__ inline void intersect_tri(Ray& ray, const Triangle& tris)
 {
     const glm::vec3 edge1 = tris.vertex1 - tris.vertex0;
     const glm::vec3 edge2 = tris.vertex2 - tris.vertex0;

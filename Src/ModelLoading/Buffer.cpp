@@ -1,8 +1,7 @@
 #include "Buffer.h"
 
-#include <cuda_runtime.h>
+#include "../CudaPicker.h"
 #include <TinyglTF/tiny_gltf.h>
-#include "../CudaUtils.cuh"
 
 namespace bml {
 
@@ -43,23 +42,24 @@ namespace bml {
         m_NumElements = accessor.count;
 		m_SizeBytes = total_size_in_bytes;
 
-        checkCudaErrors(cudaMalloc(&m_BufferHandle, m_SizeBytes));
+        acr::allocate(&m_BufferHandle, m_SizeBytes);
+        //checkCudaErrors(cudaMalloc(&m_BufferHandle, m_SizeBytes));
 
         // If buffer is not sizeof(uint32_t) then convert it to that
         if (comp_size_in_bytes == 2)
         {
             printf("[Warning]: Resizing Index Buffer from uint16_t to uint32_t! \n");
             const auto u32_from_u16 = ConvertTo32BitIndices((uint16_t*)data_loc, accessor.count);
-            checkCudaErrors(cudaMemcpy(m_BufferHandle, u32_from_u16.data(), m_SizeBytes, cudaMemcpyHostToDevice));
+            checkCudaErrors(cudaMemcpy(m_BufferHandle, u32_from_u16.data(), m_SizeBytes, acr::cudaMemcpyHostToSpecified));
         }
         else if (comp_size_in_bytes == 1)
         {
             printf("[Warning]: Resizing Index Buffer from uint8_t to uint32_t! \n");
             const auto u32_from_u8 = ConvertTo32BitIndices((uint8_t*)data_loc, accessor.count);
-            checkCudaErrors(cudaMemcpy(m_BufferHandle, u32_from_u8.data(), m_SizeBytes, cudaMemcpyHostToDevice));
+            checkCudaErrors(cudaMemcpy(m_BufferHandle, u32_from_u8.data(), m_SizeBytes, acr::cudaMemcpyHostToSpecified));
         }
         else {
-            checkCudaErrors(cudaMemcpy(m_BufferHandle, data_loc, m_SizeBytes, cudaMemcpyHostToDevice));
+            checkCudaErrors(cudaMemcpy(m_BufferHandle, data_loc, m_SizeBytes, acr::cudaMemcpyHostToSpecified));
         }
 
         printf("Created CUDA Buffer:  %s\n", name.c_str());
@@ -78,8 +78,10 @@ namespace bml {
         m_SizeBytes = m_Stride * m_NumElements;
 
         // Allocate a CUDA buffer and copy data to it
-        cudaMalloc(&m_BufferHandle, m_SizeBytes);
-        cudaMemcpy(m_BufferHandle, data, m_SizeBytes, cudaMemcpyHostToDevice);
+        acr::allocate(&m_BufferHandle, m_SizeBytes);
+
+        //cudaMalloc(&m_BufferHandle, m_SizeBytes);
+        cudaMemcpy(m_BufferHandle, data, m_SizeBytes, acr::cudaMemcpyHostToSpecified);
 
         printf("Created CUDA Buffer:  %s\n", name.c_str());
 

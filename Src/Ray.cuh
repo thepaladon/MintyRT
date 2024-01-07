@@ -9,7 +9,7 @@ class Ray
 {
 public:
 
-    __device__ Ray(const glm::vec3& o_i, const glm::vec3& d_i)
+    __host__ __device__ Ray(const glm::vec3& o_i, const glm::vec3& d_i)
     {
 	    org = o_i;
     	dir = d_i;

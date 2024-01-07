@@ -73,7 +73,7 @@ public:
     }
 
     // Generate Ray for pixel located a {x,y} on a image dimension {w,h}
-    __device__ Ray generate(float w, float h, float x, float y) const {
+    __host__ __device__ Ray generate(float w, float h, float x, float y) const {
 
         auto const rw = 1.f / float(w);
         auto const rh = 1.f / float(h);

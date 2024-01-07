@@ -26,7 +26,7 @@ struct BLASNode
 	AABB aabb;
 	int leftFirst;
 	int count;
-	__device__ bool isLeaf() { return count > 0; }
+	__host__ __device__ bool isLeaf() { return count > 0; }
 };
 
 
@@ -49,7 +49,7 @@ private:
 	int* m_GPUSortedTriIndices;
 
 public:
-	__device__ bool IntersectAABB(const Ray& ray, const glm::vec3 bmin, const glm::vec3 bmax)
+	__host__  __device__ bool IntersectAABB(const Ray& ray, const glm::vec3 bmin, const glm::vec3 bmax)
 	{
 		float tx1 = (bmin.x - ray.org.x) / ray.dir.x, tx2 = (bmax.x - ray.org.x) / ray.dir.x;
 		float tmin = glm::min(tx1, tx2), tmax = glm::max(tx1, tx2);
@@ -60,12 +60,13 @@ public:
 		return tmax >= tmin && tmin < ray.t && tmax > 0;
 	}
 
-	__device__ void IntersectBVH(Ray& ray, glm::uint nodeIdx, GPUTriData model)
+	__host__ __device__ void IntersectBVH(Ray& ray, glm::uint nodeIdx, GPUTriData model)
 	{
 		auto node = m_GPUNodes[nodeIdx];
 		//printf("Data from Node: %i \n", nodeIdx);
 
 		if (!IntersectAABB(ray, node.aabb.min, node.aabb.max)) return;
+
 		//ray.hit = true;
 		//ray.normal.x += 0.1f;
 
@@ -76,36 +77,35 @@ public:
 			//ray.hit = true;
 			//ray.normal.y = 1;
 
-			printf("[1] Index Test %p, %i \n", model.index_buffer, model.index_buffer[0]);
-			printf("[1] Vertex Test %p, %f \n", model.vertex_buffer, model.vertex_buffer[0]);
+			//printf("[1] Index Test %p, %i \n", model.index_buffer, model.index_buffer[0]);
+			//printf("[1] Vertex Test %p, %f \n", model.vertex_buffer, model.vertex_buffer[0]);
 
-			/*for (int i = 0; i < 11; i++)
-			//for (glm::uint i = node->leftFirst; i < node->leftFirst + node->count; i++)
+			for (glm::uint i = node.leftFirst; i < node.leftFirst + node.count; i++)
+			//for (int i = 0; i < 11; i++)
 			{
-				//const auto triIdx = m_GPUSortedTriIndices[i];
-				//printf("Test %i \n", triIdx);
-				const auto& i0 = model.index_buffer[i * 3 + 0];
-				const auto& i1 = model.index_buffer[i * 3 + 1];
-				const auto& i2 = model.index_buffer[i * 3 + 2];
 
-				const auto& v0x = model.vertex_buffer[i0 * 3 + 0];
-				const auto& v0y = model.vertex_buffer[i0 * 3 + 1];
-				const auto& v0z = model.vertex_buffer[i0 * 3 + 2];
-				const auto& v1x = model.vertex_buffer[i1 * 3 + 0];
-				const auto& v1y = model.vertex_buffer[i1 * 3 + 1];
-				const auto& v1z = model.vertex_buffer[i1 * 3 + 2];
-				const auto& v2x = model.vertex_buffer[i2 * 3 + 0];
-				const auto& v2y = model.vertex_buffer[i2 * 3 + 1];
-				const auto& v2z = model.vertex_buffer[i2 * 3 + 2];
+				const auto i0 = model.index_buffer[i * 3 + 0];
+				const auto i1 = model.index_buffer[i * 3 + 1];
+				const auto i2 = model.index_buffer [i * 3 + 2];
 
-				const glm::vec3& v0 = glm::vec3(v0x, v0y, v0z);
-				const glm::vec3& v1 = glm::vec3(v1x, v1y, v1z);
-				const glm::vec3& v2 = glm::vec3(v2x, v2y, v2z);
+				const auto v0x = model.vertex_buffer [i0 * 3 + 0];
+				const auto v0y = model.vertex_buffer[i0 * 3 + 1];
+				const auto v0z = model.vertex_buffer[i0 * 3 + 2];
+				const auto v1x = model.vertex_buffer[i1 * 3 + 0];
+				const auto v1y = model.vertex_buffer[i1 * 3 + 1];
+				const auto v1z = model.vertex_buffer[i1 * 3 + 2];
+				const auto v2x = model.vertex_buffer[i2 * 3 + 0];
+				const auto v2y = model.vertex_buffer[i2 * 3 + 1];
+				const auto v2z = model.vertex_buffer[i2 * 3 + 2];
+
+				const glm::vec3 v0 = glm::vec3(v0x, v0y, v0z);
+				const glm::vec3 v1 = glm::vec3(v1x, v1y, v1z);
+				const glm::vec3 v2 = glm::vec3(v2x, v2y, v2z);
 
 				Triangle tri{ v0, v1, v2 };
 
 				intersect_tri(ray, tri);
-			}*/
+			}
 
 		}
 		else if (!node.isLeaf())

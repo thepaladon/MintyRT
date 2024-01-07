@@ -2,7 +2,8 @@
 
 #include <algorithm>
 
-#include "CudaUtils.cuh"
+#include "CudaPicker.h"
+
 #include "Ray.cuh"
 #include "glm/common.hpp"
 
@@ -57,8 +58,8 @@ BLAS::BLAS(std::vector<BLASInput>& blas_build_data)
 		temp_cpu_triangle_idx.resize(num_primitivess);
 
 		// Copy Data from GPU to CPU
-		checkCudaErrors(cudaMemcpy(temp_cpu_vertices.data(), data.vertex->GetBufferDataPtr(), data.vertex->GetSizeBytes(), cudaMemcpyDeviceToHost));
-		checkCudaErrors(cudaMemcpy(temp_cpu_triangle_idx.data(), data.index->GetBufferDataPtr(), data.index->GetSizeBytes(), cudaMemcpyDeviceToHost));
+		checkCudaErrors(cudaMemcpy(temp_cpu_vertices.data(), data.vertex->GetBufferDataPtr(), data.vertex->GetSizeBytes(),	 acr::cudaMemcpySpecifiedTiHost));
+		checkCudaErrors(cudaMemcpy(temp_cpu_triangle_idx.data(), data.index->GetBufferDataPtr(), data.index->GetSizeBytes(), acr::cudaMemcpySpecifiedTiHost));
 
 
 		// Represents the temp_cpu_triangle_idx as we sort it
@@ -84,14 +85,16 @@ BLAS::BLAS(std::vector<BLASInput>& blas_build_data)
 
 	{
 		const size_t nodesSizeInBytes = sizeof(BLASNode) * m_NodesUsed;
-		checkCudaErrors(cudaMalloc(&m_GPUNodes, nodesSizeInBytes));
-		checkCudaErrors(cudaMemcpy(m_GPUNodes, nodes.data(), nodesSizeInBytes, cudaMemcpyHostToDevice));
+		acr::allocate(&m_GPUNodes, nodesSizeInBytes);
+		//checkCudaErrors(cudaMalloc(&m_GPUNodes, nodesSizeInBytes));
+		checkCudaErrors(cudaMemcpy(m_GPUNodes, nodes.data(), nodesSizeInBytes, acr::cudaMemcpyHostToSpecified));
 	}
 
 	{
 		const size_t triIndicesArrSizeInBytes = sizeof(int) * tri_indices.size();
-		checkCudaErrors(cudaMalloc(&m_GPUSortedTriIndices, triIndicesArrSizeInBytes));
-		checkCudaErrors(cudaMemcpy(m_GPUSortedTriIndices, tri_indices.data(), triIndicesArrSizeInBytes, cudaMemcpyHostToDevice));
+		//checkCudaErrors(cudaMalloc(&m_GPUSortedTriIndices, triIndicesArrSizeInBytes));
+		acr::allocate(&m_GPUSortedTriIndices, triIndicesArrSizeInBytes);
+		checkCudaErrors(cudaMemcpy(m_GPUSortedTriIndices, tri_indices.data(), triIndicesArrSizeInBytes, acr::cudaMemcpyHostToSpecified));
 	}
 
 }

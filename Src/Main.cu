@@ -3,11 +3,12 @@
 #define GLM_FORCE_CUDA
 #define CUDA_LAUNCH_BLOCKING = 1
 
+
 #include <chrono>
 #include <cstdlib>
+#include <thread>
 
 #include "BLAS.h"
-#include "cuda_runtime.h"
 #include "device_launch_parameters.h"
 #include "Ray.cuh"
 
@@ -23,14 +24,31 @@ constexpr int FB_INIT_HEIGHT= 800;
 
 #define MODEL_FP(model) (std::string("Resources/Models/") + model + "/" + model + ".gltf")
 
+struct Square {
+    int minX, minY; // Top-left corner
+    int maxX, maxY; // Bottom-right corner
+};
 
-__device__ glm::vec3 color(Ray& r, BLAS blas, GPUTriData model) {
+std::vector<Square> divideScreenIntoSquares(int screenWidth, int screenHeight, int squareSize = 32) {
+    std::vector<Square> squares;
+
+    for (int y = 0; y < screenHeight; y += squareSize) {
+        for (int x = 0; x < screenWidth; x += squareSize) {
+            squares.push_back({ x, y, x + squareSize - 1, y + squareSize - 1 });
+        }
+    }
+
+    return squares;
+}
+
+
+
+__host__ __device__ glm::vec3 color(Ray& r, BLAS blas, GPUTriData model) {
 
 	blas.IntersectBVH(r, 0, model);
 
-    printf("[2] Index Test %p, %i \n", model.index_buffer, model.index_buffer[0]);
-    printf("[2] Vertex Test %p, %f \n", model.vertex_buffer, model.vertex_buffer[0]);
-
+    //printf("[2] Index Test %p, %i \n", model.index_buffer, model.index_buffer[0]);
+    //printf("[2] Vertex Test %p, %f \n", model.vertex_buffer, model.vertex_buffer[0]);
 
     /*for (int i = 0; i < 12; i++)
     {
@@ -69,13 +87,27 @@ __device__ glm::vec3 color(Ray& r, BLAS blas, GPUTriData model) {
 
 __global__ void render(uchar3* fb, int max_x, int max_y, Camera cam, BLAS blas, GPUTriData model) {
 
-    const int i = threadIdx.x + blockIdx.x * blockDim.x;
-    const int j = threadIdx.y + blockIdx.y * blockDim.y;
-    if ((i >= max_x) || (j >= max_y)) return;
+    const int u = threadIdx.x + blockIdx.x * blockDim.x;
+    const int v = threadIdx.y + blockIdx.y * blockDim.y;
+    if ((u >= max_x) || (v >= max_y)) return;
 
-    int pixel_index = j * max_x + i;
- 	Ray r = cam.generate((float)max_x, (float)max_y, (float)i, (float)j);
+    int pixel_index = v * max_x + u;
+ 	Ray r = cam.generate((float)max_x, (float)max_y, (float)u, (float)v);
     fb[pixel_index] = to_uchar3(color(r, blas, model));
+}
+
+
+void CPURender(uchar3* fb, glm::ivec2 min, glm::ivec2 max, glm::ivec2 total, Camera cam, BLAS blas, GPUTriData model)
+{
+    for (int u = min.x; u <= max.x; u++) {
+        for (int v = min.y; v <= max.y ; v++) 
+        {
+            if ((u >= total.x) || (v >= total.y)) return;
+        	int pixel_index = v * total.x + u;
+        	Ray r = cam.generate((float)total.x, (float)total.y, (float)u, (float)v);
+            fb[pixel_index] = to_uchar3(color(r, blas, model));
+        }
+    }
 }
 
 
@@ -214,6 +246,7 @@ int main()
             printf("Resized : %i : %i \n", alignedX, alignedY);
         }
 
+#ifdef USE_GPU
         // Thread Groups
         constexpr int tx = 8;
         constexpr int ty = 8;
@@ -221,7 +254,9 @@ int main()
         // Render our buffer
         const dim3 blocks(alignedX / tx + 1, alignedY / ty + 1);
         const dim3 threads(tx, ty);
-        render << < blocks, threads >> > (
+
+
+    	render << < blocks, threads >> > (
             gpu_fb,
             alignedX,
             alignedY,
@@ -234,6 +269,42 @@ int main()
         checkCudaErrors(cudaDeviceSynchronize());
 
         cudaMemcpy(cpu_fb, gpu_fb, alignedX * alignedY * sizeof(uchar3), cudaMemcpyDeviceToHost);
+        
+#else
+
+        // Worst multithreading on the planet,
+        // but aye it works
+        std::vector<Square> groups = divideScreenIntoSquares(alignedX, alignedY, 150);
+        std::vector<std::thread> threads;
+
+        glm::ivec2 total = { alignedX, alignedY };
+
+        for (const auto& group : groups) {
+            glm::ivec2 min = { group.minX, group.minY };
+            glm::ivec2 max = { group.maxX, group.maxY };
+
+            threads.emplace_back(CPURender, cpu_fb,
+                min, 
+                max, 
+                total,
+                cam,
+                blastest,
+                model_data);
+        }
+
+        for (auto& thread : threads) {
+            thread.join();
+        }
+
+
+        /*CPURender(cpu_fb,
+            alignedX,
+            alignedY,
+            cam,
+            blastest,
+            model_data);*/
+
+#endif
 
         m_Window->RenderFb(cpu_fb);
     }
