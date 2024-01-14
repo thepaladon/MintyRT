@@ -24,5 +24,11 @@ So far I've gotten started with the basics but due to heavy work in my school pr
 3. Open `MintyRT.sln` in VS22
 4. Run the project
 
-Look into the code, if you want to run it on the GPU. There's a `USE_GPU` define
-NOTE: Using GPU on Debug is broken for some reason so don't do that!
+Look into the code, if you want to run it on the GPU. There's a `USE_GPU` define in `CudaUtils.cuh`.
+
+**NOTE:** Using GPU on Debug is broken for some reason so don't do that!
+
+## Controls:
+W A S D - Move the Camera Forward / Left / Back / Right
+R / F - Move the Camera Up / Down
+Arrow Keys - Adjust the camera's pitch and yaw
