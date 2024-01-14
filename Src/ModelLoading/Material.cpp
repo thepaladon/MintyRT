@@ -13,7 +13,7 @@ namespace bml
 		if (mat.normalTexture.index != -1)
 			m_Data.m_NormalMapIndex = textures[mat.normalTexture.index].source;
 
-		m_Data.m_NormalScale = mat.normalTexture.scale;
+		m_Data.m_NormalScale = static_cast<float>(mat.normalTexture.scale);
 
 		// PBR
 		m_Data.m_BaseColorFactor = glm::vec4(mat.pbrMetallicRoughness.baseColorFactor[0], mat.pbrMetallicRoughness.baseColorFactor[1], mat.pbrMetallicRoughness.baseColorFactor[2], mat.pbrMetallicRoughness.baseColorFactor[3]);
@@ -34,7 +34,7 @@ namespace bml
 		// Ao
 		if (mat.occlusionTexture.index != -1)
 			m_Data.m_AOTextureIndex = textures[mat.occlusionTexture.index].source;
-		m_Data.m_AOStrength = mat.occlusionTexture.strength;
+		m_Data.m_AOStrength = static_cast<float>(mat.occlusionTexture.strength);
 
 	}
 

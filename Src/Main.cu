@@ -241,7 +241,7 @@ int main()
 #else
         glm::ivec2 total = { alignedX, alignedY };
 
-        constexpr bool shittyMultithreading = false;
+        constexpr bool shittyMultithreading = true;
         if (shittyMultithreading) {
             // Worst multithreading on the planet,
             // but aye it works
