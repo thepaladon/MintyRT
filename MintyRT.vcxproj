@@ -55,16 +55,27 @@
       <Optimization>Disabled</Optimization>
       <PreprocessorDefinitions>WIN32;WIN64;_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <AdditionalIncludeDirectories>$(ProjectDir)External;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <MultiProcessorCompilation>true</MultiProcessorCompilation>
+      <OpenMPSupport>true</OpenMPSupport>
+      <TreatWarningAsError>true</TreatWarningAsError>
     </ClCompile>
     <Link>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <SubSystem>Console</SubSystem>
       <AdditionalDependencies>cudart_static.lib;kernel32.lib;user32.lib;gdi32.lib;winspool.lib;comdlg32.lib;advapi32.lib;shell32.lib;ole32.lib;oleaut32.lib;uuid.lib;odbc32.lib;odbccp32.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <IgnoreAllDefaultLibraries>false</IgnoreAllDefaultLibraries>
     </Link>
     <CudaCompile>
       <TargetMachinePlatform>64</TargetMachinePlatform>
       <CompileOut>$(SolutionDir)Build\Intermediate\$(Platform)\$(Configuration)\%(Filename)%(Extension).obj</CompileOut>
+      <GenerateRelocatableDeviceCode>true</GenerateRelocatableDeviceCode>
     </CudaCompile>
+    <CudaLink>
+      <GPUDebugInfo>true</GPUDebugInfo>
+    </CudaLink>
+    <CudaLink>
+      <Optimization>Od</Optimization>
+    </CudaLink>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <ClCompile>
@@ -74,6 +85,9 @@
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <PreprocessorDefinitions>WIN32;WIN64;NDEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <AdditionalIncludeDirectories>$(ProjectDir)External;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <MultiProcessorCompilation>true</MultiProcessorCompilation>
+      <OpenMPSupport>true</OpenMPSupport>
+      <TreatWarningAsError>true</TreatWarningAsError>
     </ClCompile>
     <Link>
       <GenerateDebugInformation>true</GenerateDebugInformation>
@@ -81,16 +95,23 @@
       <OptimizeReferences>true</OptimizeReferences>
       <SubSystem>Console</SubSystem>
       <AdditionalDependencies>cudart_static.lib;kernel32.lib;user32.lib;gdi32.lib;winspool.lib;comdlg32.lib;advapi32.lib;shell32.lib;ole32.lib;oleaut32.lib;uuid.lib;odbc32.lib;odbccp32.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <IgnoreAllDefaultLibraries>false</IgnoreAllDefaultLibraries>
     </Link>
     <CudaCompile>
       <TargetMachinePlatform>64</TargetMachinePlatform>
       <CompileOut>$(SolutionDir)Build\Intermediate\$(Platform)\$(Configuration)\%(Filename)%(Extension).obj</CompileOut>
+      <GenerateRelocatableDeviceCode>true</GenerateRelocatableDeviceCode>
     </CudaCompile>
   </ItemDefinitionGroup>
   <ItemGroup>
     <CudaCompile Include="Src\Main.cu" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="Src\BLAS.h" />
+    <ClInclude Include="External\stb\stb_image.h" />
+    <ClInclude Include="External\stb\stb_image_write.h" />
+    <ClInclude Include="External\TinyglTF\json.hpp" />
+    <ClInclude Include="External\TinyglTF\tiny_gltf.h" />
     <ClInclude Include="Src\Camera.cuh" />
     <ClInclude Include="External\glm\common.hpp" />
     <ClInclude Include="External\glm\detail\compute_common.hpp" />
@@ -374,12 +395,31 @@
     <ClInclude Include="External\glm\vec3.hpp" />
     <ClInclude Include="External\glm\vec4.hpp" />
     <ClInclude Include="External\glm\vector_relational.hpp" />
+    <ClInclude Include="Src\CudaPicker.h" />
+    <ClInclude Include="Src\CudaUtils.cuh" />
+    <ClInclude Include="Src\ModelLoading\Buffer.h" />
+    <ClInclude Include="Src\ModelLoading\GpuModelStruct.h" />
+    <ClInclude Include="Src\ModelLoading\Image.h" />
+    <ClInclude Include="Src\ModelLoading\Material.h" />
+    <ClInclude Include="Src\ModelLoading\Mesh.h" />
+    <ClInclude Include="Src\ModelLoading\Model.h" />
+    <ClInclude Include="Src\ModelLoading\Primitive.h" />
     <ClInclude Include="Src\Ray.cuh" />
     <ClInclude Include="Src\Utils.h" />
     <ClInclude Include="Src\Window.h" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="Src\BLAS.cpp" />
     <ClCompile Include="External\glm\detail\glm.cpp" />
+    <ClCompile Include="External\stb\stb_image.cpp" />
+    <ClCompile Include="External\stb\stb_image_write.cpp" />
+    <ClCompile Include="External\TinyglTF\tiny_gltf.cpp" />
+    <ClCompile Include="Src\ModelLoading\Buffer.cpp" />
+    <ClCompile Include="Src\ModelLoading\Image.cpp" />
+    <ClCompile Include="Src\ModelLoading\Material.cpp" />
+    <ClCompile Include="Src\ModelLoading\Mesh.cpp" />
+    <ClCompile Include="Src\ModelLoading\Model.cpp" />
+    <ClCompile Include="Src\ModelLoading\Primitive.cpp" />
     <ClCompile Include="Src\Window.cpp" />
   </ItemGroup>
   <ItemGroup>

@@ -5,8 +5,9 @@
 #include <vector_types.h>
 #include <Windows.h>
 #include <Windowsx.h>
-//----------------------------------------
+#include "Utils.h"
 
+//----------------------------------------
 
 LRESULT WINAPI WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam);
 
@@ -69,10 +70,10 @@ HBITMAP Window::CreateSampleDIB()
     if (m_Bitmap) 
     	DeleteObject(m_Bitmap);
 
-    BITMAPINFO bmi = { 0 };
+    BITMAPINFO bmi = {{0}};
     bmi.bmiHeader.biSize = sizeof(BITMAPINFOHEADER);
-    bmi.bmiHeader.biWidth = this->GetAlignedWidth();
-    bmi.bmiHeader.biHeight = -this->GetAlignedHeight();  // Negative height for top-down DIB
+    bmi.bmiHeader.biWidth = static_cast<LONG>(this->GetAlignedWidth());
+    bmi.bmiHeader.biHeight = -static_cast<LONG>(this->GetAlignedHeight());  // Negative height for top-down DIB
     bmi.bmiHeader.biPlanes = 1;
     bmi.bmiHeader.biBitCount = sizeof(uchar3) * 8; // 24 - bit RGB
 
@@ -191,7 +192,6 @@ LRESULT WINAPI WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
         data->m_Width = width;
         data->m_Height = height;
         data->m_Resized = true;
-        printf("Resizing : %i : %i \n", width, height);
 
     } break;
 
@@ -202,8 +202,8 @@ LRESULT WINAPI WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
 
         if (rawInput.header.dwType == RIM_TYPEMOUSE) {
 
-            data->m_MouseDeltaX = data->m_MouseGlobalPosX - rawInput.data.mouse.lLastX;
-            data->m_MouseDeltaY = data->m_MouseGlobalPosY - rawInput.data.mouse.lLastY;
+            data->m_MouseDeltaX = static_cast<float>(data->m_MouseGlobalPosX) - static_cast<float>(rawInput.data.mouse.lLastX);
+            data->m_MouseDeltaY = static_cast<float>(data->m_MouseGlobalPosY) - static_cast<float>(rawInput.data.mouse.lLastY);
 
             data->m_MouseGlobalPosX = rawInput.data.mouse.lLastX;
             data->m_MouseGlobalPosY = rawInput.data.mouse.lLastY;
@@ -230,7 +230,6 @@ LRESULT WINAPI WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
 }
 
 
-#include "Utils.h"
 constexpr uint32_t WIN_ALIGNMENT = 4;
 uint32_t Window::GetAlignedWidth() const
 {

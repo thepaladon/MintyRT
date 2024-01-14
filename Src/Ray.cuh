@@ -2,18 +2,25 @@
 
 #pragma once
 
+#include <cuda_runtime_api.h>
 #include <glm/glm.hpp>
 
 class Ray
 {
 public:
-    __device__ Ray() {}
-    __device__ Ray(const glm::vec3& o_i, const glm::vec3& d_i) { o = o_i; d = d_i; }
-    __device__ glm::vec3 origin() const { return o; }
-    __device__ glm::vec3 direction() const { return d; }
-    __device__ glm::vec3 point_at_parameter(float t) const { return o + t * d; }
 
-    glm::vec3 o;
-    glm::vec3 d;
+    __host__ __device__ Ray(const glm::vec3& o_i, const glm::vec3& d_i)
+    {
+	    org = o_i;
+    	dir = d_i;
+        t = 1e30f;
+        normal = glm::vec3(0.0f);
+        hit = false;
+    }
+
     float t;
+	bool hit;
+    glm::vec3 org;
+    glm::vec3 dir;
+    glm::vec3 normal;
 };

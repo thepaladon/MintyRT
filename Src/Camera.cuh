@@ -1,5 +1,4 @@
 #pragma once
-#include <crt/host_defines.h>
 
 #include "Ray.cuh"
 
@@ -9,9 +8,7 @@
 
 constexpr float PI = 3.14159265359f;
 
-__host__ __device__ float degrees_to_radians(double degrees) {
-    return degrees * (PI / 180.0);
-}
+
 
 class Camera {
 
@@ -78,7 +75,7 @@ public:
     }
 
     // Generate Ray for pixel located a {x,y} on a image dimension {w,h}
-    __device__ Ray generate(float w, float h, float x, float y) const {
+    __host__ __device__ Ray generate(float w, float h, float x, float y) const {
 
         auto const rw = 1.f / float(w);
         auto const rh = 1.f / float(h);
@@ -106,3 +103,52 @@ public:
     float m_ViewScalar = 0.1f;
     float m_MoveScalar = 0.02f;
 };
+
+
+// Here to avoid bloat in Main.cu
+inline void CameraInput(Camera& cam, const Window* window)
+{
+    // Replace with mouse controls once that is implemented in a good way.
+    float hor_inp = 0;
+    float ver_inp = 0;
+    if (window->GetKey(VK_LEFT)) { hor_inp = -1.0; }
+    if (window->GetKey(VK_RIGHT)) { hor_inp = 1.0; }
+    if (window->GetKey(VK_UP)) { ver_inp = -1.0; }
+    if (window->GetKey(VK_DOWN)) { ver_inp = 1.0; }
+
+	if (window->GetKey('W'))
+    {
+        cam.MoveFwd(1.0f);
+    }
+
+    if (window->GetKey('S'))
+    {
+        cam.MoveFwd(-1.0f);
+    }
+
+    if (window->GetKey('D'))
+    {
+        cam.MoveRight(1.0f);
+    }
+
+    if (window->GetKey('A'))
+    {
+        cam.MoveRight(-1.0f);
+    }
+
+    if (window->GetKey('R'))
+    {
+        cam.MoveUp(1.0f);
+    }
+
+    if (window->GetKey('F'))
+    {
+        cam.MoveUp(-1.0f);
+    }
+
+    const float m_dtx = hor_inp; // window->GetMouseDeltaX();
+    const float m_dty = ver_inp; // window->GetMouseDeltaY();
+    cam.SetPitch(m_dty);
+    cam.SetYaw(m_dtx);
+    cam.UpdateCamera();
+}
